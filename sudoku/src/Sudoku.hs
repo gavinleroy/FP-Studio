@@ -212,26 +212,22 @@ readIntMaybe = readMaybe
 
 parseCell :: Int -> String -> Maybe Cell
 parseCell mx "." = return $ Choices $ Set.fromAscList [1..mx]
-parseCell mx cs  
-  = readIntMaybe cs
-  >>= return . Fixed
+parseCell mx cs  = readIntMaybe cs >>= return . Fixed
 
 parseCellRow :: Int -> String -> Maybe (Row Cell)
 parseCellRow mxn = mapM (parseCell mxn) . words
 
 parseBoard :: String -> Maybe Board
 parseBoard cs = do
-  let lns = lines cs
-  let size = head lns
-  let sboard = tail lns
-  [m, n]  <- mapM readIntMaybe . words $ size
-  brd     <- mapM (parseCellRow (m * n)) sboard
+  (size, sb) <- List.uncons $ lines cs
+  [m, n]     <- mapM readIntMaybe . words $ size
+  brd        <- mapM (parseCellRow (m * n)) sb
   return (brd, (m, n))
 
 makeString3x3 :: String -> String
 makeString3x3 
   = unlines 
-  . ((:) "3 3") 
+  . ("3 3" :) 
   . map (List.intersperse ' ') 
   . chunksOf 9
 
