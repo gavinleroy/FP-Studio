@@ -9,6 +9,20 @@ import Sudoku
 errormsg :: String
 errormsg = "Unsolvable or incorrectly formatted board :("
 
+menumsg :: String
+menumsg  = unlines
+  [ ""
+  , "Select a menu option:"
+  , "---------------------"
+  , "1. Solve Easy Board"
+  , "2. Solve Hard Board"
+  , "3. Solve Wikipedia Board"
+  , "4. Solve 3x2 Board"
+  , "5. Solve 50,000 3x3 Boards"
+  , "6. Solve Custom board from file"
+  , "7. Generate MxN Sudoku board"
+  ]
+
 board3x2 :: String
 board3x2
   = unlines
@@ -38,15 +52,15 @@ hardboard :: String
 hardboard 
   = unlines 
   [ "3 3"
-  , "9 1 . 3 . . . . 8"
-  , ". 8 4 . . 1 . 7 ."
-  , ". . . . 9 . 6 . ."
-  , ". . . 8 7 6 . 3 ."
-  , ". . 6 . . . 7 . ."
-  , ". 7 . 9 5 3 . . ."
-  , ". . 8 . 3 . . . ."
-  , ". 6 . 7 . . 8 5 ."
-  , "4 . . . . 9 . 2 7"]
+  , "5 . . 9 . 4 . 7 ."
+  , ". . . . . 7 . . ."
+  , ". 2 . . 1 . . . ."
+  , "9 . . . . . . . ."
+  , ". . . . 6 1 . 2 ."
+  , ". 8 5 4 . . . . ."
+  , "4 . . 8 . 2 . 5 ."
+  , ". . . 7 . . 3 9 6"
+  , ". . . . . . . . ."]
 
 mysteryboard :: String
 mysteryboard 
@@ -74,8 +88,16 @@ main' msg board = do
   putStrLn $ maybe errormsg id $ solveFromString board
 
 main :: IO ()
--- main = main' "3x2 Board" board3x2
--- main = main' "Easy Board" easyboard
--- main = main' "Hard Board" hardboard
-main = main' "Mystery Board" mysteryboard
--- main = readFileMain
+main = do
+  putStrLn menumsg
+  option <- read <$> getLine
+  case option of
+    1 -> main' "Easy Board" easyboard
+    2 -> main' "Hard Board" hardboard
+    3 -> main' "Wikipedia Board" mysteryboard
+    4 -> main' "3x2 Board" board3x2
+    5 -> readFileMain
+    6 -> undefined
+    7 -> undefined
+    _ -> putStrLn "Invalid option :("
+

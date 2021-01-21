@@ -1,25 +1,25 @@
 module Sudoku where
-  -- ( solveFromString 
-  -- ) where
   
-import Data.List              (intersect, intersperse, transpose, (\\), minimumBy, foldl')
+import Control.Applicative        ((<|>))
+import Data.Function              (on)
+import Data.IntSet                (IntSet)
+-- import Data.Vector                (Vector)
+import Text.Read                  (readMaybe)
 
-import Data.Set               (Set)
-import Data.Map               (Map)
-import Text.Read              (readMaybe)
-import Data.Function          (on)
-import Control.Applicative    (Alternative, (<|>))
-import Control.Monad          (fmap, replicateM)
+import qualified Data.List        as List
+import qualified Data.Map         as Map
+import qualified Data.IntSet      as Set
+-- import qualified Data.Vector      as Vec
 
-import qualified Data.Map     as Map
-import qualified Data.Set     as Set
+-- Data Definitions --
 
 data Cell
   = Fixed Int
-  | Choices (Set Int)
+  | Choices IntSet
 instance Show Cell where
   show (Fixed i)     = show i
-  show (Choices xs)  = show xs
+  show (Choices _)   = "."
+  -- show (Choices xs)  = show xs
 instance Eq Cell where
   (Fixed x) == (Fixed y)     = x == y
   (Choices x) == (Choices y) = x == y
@@ -32,10 +32,10 @@ type Board    = (Matrix Cell, Size)
 
 -- Utility Functions --
 
-toCell :: Set Int -> Maybe Cell
+toCell :: IntSet -> Maybe Cell
 toCell s 
   | ssize == 0 = Nothing
-  | ssize == 1 = Just $ Fixed $ Set.elemAt 0 s
+  | ssize == 1 = Just $ Fixed $ Set.findMin s
   | otherwise  = Just $ Choices s 
   where ssize  = Set.size s
 
@@ -59,7 +59,7 @@ rows :: Matrix a -> [Row a]
 rows = id
 
 cols :: Matrix a -> [Row a]
-cols = transpose
+cols = List.transpose
 
 blocks :: Size -> Matrix a -> [Row a]
 blocks (m, n) = join . map cols . chunk
@@ -108,26 +108,25 @@ uniqueCells :: Row Cell -> [[Int]]
 uniqueCells
   = Map.elems
   . Map.filterWithKey (\xs ys -> length xs == length ys)
-  . Map.foldlWithKey' (\acc k ns -> Map.insertWith p ns [k] acc) Map.empty
-  . foldl' (\acc ~(i, (Choices setns))-> 
+  . Map.foldlWithKey' (\acc k ns -> Map.insertWith (++) ns [k] acc) Map.empty
+  . List.foldl' (\acc ~(i, (Choices setns))-> 
       Set.foldl' (\acc' k ->
-        Map.insertWith p k [i] acc') acc setns) Map.empty
+        Map.insertWith (++) k [i] acc') acc setns) Map.empty
   . filter (not . isFixed . snd)
   . zip [1..]
-  where p = (++)
 
-pruneCellByKnown :: (Set Int) -> Cell -> Maybe Cell
+pruneCellByKnown :: IntSet -> Cell -> Maybe Cell
 pruneCellByKnown ns (Choices xs) = toCell $ Set.difference xs ns
 pruneCellByKnown _ x = return x
 
 pruneRowByKnown :: Row Cell -> Maybe (Row Cell)
-pruneRowByKnown cells = traverse (pruneCellByKnown knowncells) cells
+pruneRowByKnown cells = mapM (pruneCellByKnown knowncells) cells
   where knowncells = Set.fromList [n | Fixed n <- cells]
 
 pruneRowByUnique :: Row Cell -> Maybe (Row Cell)
 pruneRowByUnique cells = case uniqueChoices of
   [] -> return cells
-  _  -> traverse pruneCellMore cells 
+  _  -> mapM pruneCellMore cells 
   where
     uniqueChoices = map Set.fromList $ uniqueCells cells
     choiceSet = Set.unions uniqueChoices
@@ -149,9 +148,9 @@ pruneBoard = fixedpointM prune
   where
     prune :: Board -> Maybe Board
     prune (board, size) 
-      = traverse pruneRow board
-      >>= fmap transpose . traverse pruneRow . transpose
-      >>= fmap (blocks size) . traverse pruneRow . blocks size
+      = mapM pruneRow board
+      >>= fmap cols . mapM pruneRow . cols
+      >>= fmap (blocks size) . mapM pruneRow . blocks size
       >>= return . (flip (,) size)
 
 -- Functions for Solving the Sudoku --
@@ -162,12 +161,12 @@ nextChoices (board, size@(m, n))
     , list2Board size $ replCell i rstCell cellList)
   where
     (i, fstCell, rstCell) 
-      = setCell . minimumBy (compare `on` (numChoices . snd))
+      = setCell . List.minimumBy (compare `on` (numChoices . snd))
       . filter (not . isFixed . snd) $ cellList
     cellList = zip [0..] . concat $ board
 
     list2Board :: Size -> [Cell] -> Board
-    list2Board s@(m,  n) l = (chunksOf (m * n) l, s)
+    list2Board size'@(m,  n) l = (chunksOf (m * n) l, size')
 
     replCell :: Int -> Cell -> [(Int, Cell)] -> [Cell]
     replCell i newCell ((p, c):cs) 
@@ -175,15 +174,14 @@ nextChoices (board, size@(m, n))
       | otherwise = c : replCell i newCell cs 
 
     setCell :: (Int, Cell) -> (Int, Cell, Cell)
-    -- setCell (_, (Fixed _))   = error "unreachable setCell pattern"
+    setCell (_, (Fixed _))   = error "unreachable setCell pattern"
     setCell (i, (Choices s))
-      -- | Set.size s < 2 = error "unreachable setCell pattern"
-      | Set.size rstS == 1   = (i, Fixed fstN, Fixed rstN)
+      | Set.size s < 2       = error "unreachable setCell pattern"
+      | Set.size s == 2      = (i, Fixed fstN, Fixed rstN)
       | otherwise            = (i, Fixed fstN, Choices rstS)
       where
-        fstN = Set.elemAt 0 fstS
-        rstN = Set.elemAt 0 rstS
-        (fstS, rstS) = Set.splitAt 1 s
+        (rstN, _)    = Set.deleteFindMin rstS
+        (fstN, rstS) = Set.deleteFindMin s
 
 solve' :: Board -> Maybe Board
 solve' b
@@ -205,6 +203,12 @@ solveFromString cs
   >>= return . showBoard
   
 -- Parsing a Board --
+
+readInt :: String -> Int
+readInt = read
+
+readIntMaybe :: String -> Maybe Int
+readIntMaybe = readMaybe
 
 parseCell :: Int -> String -> Maybe Cell
 parseCell mx "." = return $ Choices $ Set.fromAscList [1..mx]
@@ -228,34 +232,21 @@ makeString3x3 :: String -> String
 makeString3x3 
   = unlines 
   . ((:) "3 3") 
-  . map (intersperse ' ') 
+  . map (List.intersperse ' ') 
   . chunksOf 9
 
 -- Printing a Board --
 
-readInt :: String -> Int
-readInt = read
-
-readIntMaybe :: String -> Maybe Int
-readIntMaybe = readMaybe
-
-row2string :: Int -> [Cell] -> String
-row2string m [] = "\n"
-row2string m cs 
-  = (unwords $ map show $ take m cs) 
-  ++ "   " 
-  ++ (row2string m $ drop m cs)
-
-concatins :: Int -> [String] -> String
-concatins n [] = []
-concatins n ss 
-  = (concat $ take n ss) 
-  ++ "\n" 
-  ++ (concatins n $ drop n ss)
-
 showBoard :: Board -> String
 showBoard (board, (m, n)) 
-  = unlines 
-  [show m ++ "x" ++ show n
-  , (concatins n $ map (row2string m) board)]
+  = show m ++ "x" ++ show n  ++ "\n" ++ (intersperseNL $  map row2string board)
+  where
+    row2string = intersperseS m "  " . map show
+    intersperseNL = intersperseS n "\n"
+    intersperseS num str
+      = concat 
+      . concat
+      . map (List.intersperse str) 
+      . List.intersperse [str ++ str] 
+      . chunksOf num
 
