@@ -4,6 +4,8 @@ import System.IO
 import Control.Monad
 import Sudoku
 
+-- All boards verified using https://www.sudoku-solutions.com/
+
 errormsg :: String
 errormsg = "Unsolvable or incorrectly formatted board :("
 
@@ -49,53 +51,31 @@ hardboard
 mysteryboard :: String
 mysteryboard 
   = unlines
-  [ "3 3"
-  , ". . . . . . . 1 ."
-  , "4 . . . . . . . ."
-  , ". 2 . . . . . . ."
-  , ". . . . 5 . 4 . 7"
-  , ". . 8 . . . 3 . ."
-  , ". . 1 . 9 . . . ."
-  , "3 . . 4 . . 2 . ."
-  , ". 5 . 1 . . . . ."
-  , ". . . 8 . 6 . . ."]
-
-board3x2main :: IO ()
-board3x2main = do
-  putStrLn "3x2 board before solving ..."
-  putStrLn board3x2
-  putStrLn "3x2 board solved :" 
-  putStrLn $ maybe errormsg id $ solveFromString board3x2
-
-easymain :: IO ()
-easymain = do
-  putStrLn "Easy board before solving ..."
-  putStrLn easyboard
-  putStrLn "Easy board solved :" 
-  putStrLn $ maybe errormsg id $ solveFromString easyboard
-
-hardmain :: IO ()
-hardmain = do
-  putStrLn "Hard board before solving ..."
-  putStrLn easyboard
-  putStrLn "Hard board solved :" 
-  putStrLn $ maybe errormsg id $ solveFromString hardboard
-
-mysterymain :: IO ()
-mysterymain = do
-  putStrLn "Mystery board before solving ..."
-  putStrLn easyboard
-  putStrLn "Mystery board solved :" 
-  putStrLn $ maybe errormsg id $ solveFromString mysteryboard
+  [ "3 3" -- 'Mystery' = taken from Wikipedia
+  , ". . . . 4 . . . ."
+  , "1 2 . . . . . 7 3"
+  , ". 3 . . . 8 . . ."
+  , ". . 4 . . . 6 . ."
+  , ". . . 2 . 3 . . ."
+  , ". . 5 . . . . . ."
+  , ". . 6 . 9 . 5 . ."
+  , ". 7 . . . . . 2 ."
+  , ". . . . . . . . ."]
 
 readFileMain :: IO ()
 readFileMain = do 
   contents <- readFile "./sudoku3x3tests.txt"
-  putStrLn . unlines . map (maybe errormsg id . solveFromString . make3x3) . lines $ contents
+  putStrLn . unlines . map (maybe errormsg id . solveFromString . makeString3x3) . lines $ contents
+
+main' :: String -> String -> IO ()
+main' msg board = do
+  putStrLn msg
+  putStrLn board
+  putStrLn $ maybe errormsg id $ solveFromString board
 
 main :: IO ()
-main = board3x2main
--- main = easymain
--- main = hardmain
--- main = mysterymain
+-- main = main' "3x2 Board" board3x2
+-- main = main' "Easy Board" easyboard
+-- main = main' "Hard Board" hardboard
+main = main' "Mystery Board" mysteryboard
 -- main = readFileMain

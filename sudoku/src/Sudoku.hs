@@ -1,19 +1,24 @@
 module Sudoku where
   -- ( solveFromString 
   -- ) where
+  
+import Data.List              (intersect, intersperse, transpose, (\\), minimumBy, foldl')
 
-import Data.List            (intersect, intersperse, transpose, (\\), minimumBy, foldl')
-import Control.Monad        (fmap, replicateM)
-import Control.Applicative  (Alternative, (<|>))
-import Data.Function        (on)
-import Text.Read            (readMaybe)
-import Data.Map             (empty, insertWith, foldlWithKey', filterWithKey, elems)
+import Data.Set               (Set)
+import Data.Map               (Map)
+import Text.Read              (readMaybe)
+import Data.Function          (on)
+import Control.Applicative    (Alternative, (<|>))
+import Control.Monad          (fmap, replicateM)
+
+import qualified Data.Map     as Map
+import qualified Data.Set     as Set
 
 data Cell
   = Fixed Int
-  | Choices [Int]
+  | Choices (Set Int)
 instance Show Cell where
-  show (Fixed i)    = show i
+  show (Fixed i)     = show i
   show (Choices xs)  = show xs
 instance Eq Cell where
   (Fixed x) == (Fixed y)     = x == y
@@ -27,17 +32,19 @@ type Board    = (Matrix Cell, Size)
 
 -- Utility Functions --
 
-toCell :: [Int] -> Maybe Cell
-toCell []  = Nothing
-toCell [x] = Just $ Fixed x
-toCell xs  = Just $ Choices xs
+toCell :: Set Int -> Maybe Cell
+toCell s 
+  | ssize == 0 = Nothing
+  | ssize == 1 = Just $ Fixed $ Set.elemAt 0 s
+  | otherwise  = Just $ Choices s 
+  where ssize  = Set.size s
 
 isFixed :: Cell -> Bool
 isFixed (Fixed _) = True
 isFixed _         = False
 
 numChoices :: Cell -> Int
-numChoices (Choices xs) = length xs
+numChoices (Choices xs) = Set.size xs
 numChoices _            = 1
 
 isUnique :: Eq a => [a] -> Bool
@@ -75,9 +82,11 @@ isValid (b, mxn)
 
 isDeadEnd :: Board -> Bool
 isDeadEnd (b, size) 
+  -- Unique Constraint
   = (any checkRowFix $ rows b)
   || (any checkRowFix $ cols b)
   || (any checkRowFix $ blocks size b)
+  -- Remaining Possibilities Constraint
   || any checkRowChoice b
   where
     checkRowFix :: Row Cell -> Bool
@@ -97,40 +106,43 @@ fixedpointM f b
 
 uniqueCells :: Row Cell -> [[Int]]
 uniqueCells
-  = elems
-  . filterWithKey (\xs ys -> length xs == length ys)
-  . foldlWithKey' (\acc k ns -> insertWith p ns [k] acc) empty
-  . foldl' (\acc ~(i, (Choices ns))-> 
-      foldl' (\acc' k -> 
-        insertWith p k [i] acc') acc ns) empty
+  = Map.elems
+  . Map.filterWithKey (\xs ys -> length xs == length ys)
+  . Map.foldlWithKey' (\acc k ns -> Map.insertWith p ns [k] acc) Map.empty
+  . foldl' (\acc ~(i, (Choices setns))-> 
+      Set.foldl' (\acc' k ->
+        Map.insertWith p k [i] acc') acc setns) Map.empty
   . filter (not . isFixed . snd)
   . zip [1..]
-  where p = (flip (++))
+  where p = (++)
 
-pruneCellByKnown :: [Int] -> Cell -> Maybe Cell
-pruneCellByKnown ns (Choices xs) = toCell $ xs \\ ns
+pruneCellByKnown :: (Set Int) -> Cell -> Maybe Cell
+pruneCellByKnown ns (Choices xs) = toCell $ Set.difference xs ns
 pruneCellByKnown _ x = return x
 
 pruneRowByKnown :: Row Cell -> Maybe (Row Cell)
 pruneRowByKnown cells = traverse (pruneCellByKnown knowncells) cells
-  where knowncells = [n | Fixed n <- cells]
+  where knowncells = Set.fromList [n | Fixed n <- cells]
 
 pruneRowByUnique :: Row Cell -> Maybe (Row Cell)
 pruneRowByUnique cells = case uniqueChoices of
   [] -> return cells
   _  -> traverse pruneCellMore cells 
   where
-    uniqueChoices = uniqueCells cells
+    uniqueChoices = map Set.fromList $ uniqueCells cells
+    choiceSet = Set.unions uniqueChoices
 
     pruneCellMore :: Cell -> Maybe Cell
     pruneCellMore cell@(Fixed _) = return cell
     pruneCellMore cell@(Choices ns)
       | intersection `elem` uniqueChoices = toCell intersection
       | otherwise                         = return cell
-      where intersection = intersect ns $ concat uniqueChoices
+      where intersection = Set.intersection ns choiceSet
 
 pruneRow :: Row Cell -> Maybe (Row Cell)
-pruneRow cells = fixedpointM pruneRowByKnown cells >>= pruneRowByUnique
+pruneRow cells 
+  = fixedpointM pruneRowByKnown cells 
+  >>= pruneRowByUnique
 
 pruneBoard :: Board -> Maybe Board      
 pruneBoard = fixedpointM prune
@@ -163,21 +175,28 @@ nextChoices (board, size@(m, n))
       | otherwise = c : replCell i newCell cs 
 
     setCell :: (Int, Cell) -> (Int, Cell, Cell)
-    setCell (i, (Choices [a, b])) = (i, Fixed a, Fixed b)
-    setCell (i, (Choices (x:xs))) = (i, Fixed x, Choices xs)
+    -- setCell (_, (Fixed _))   = error "unreachable setCell pattern"
+    setCell (i, (Choices s))
+      -- | Set.size s < 2 = error "unreachable setCell pattern"
+      | Set.size rstS == 1   = (i, Fixed fstN, Fixed rstN)
+      | otherwise            = (i, Fixed fstN, Choices rstS)
+      where
+        fstN = Set.elemAt 0 fstS
+        rstN = Set.elemAt 0 rstS
+        (fstS, rstS) = Set.splitAt 1 s
+
+solve' :: Board -> Maybe Board
+solve' b
+  | isDeadEnd b  = Nothing
+  | isValid b    = Just b
+  | otherwise    = 
+    let (b1, b2) = nextChoices b
+    in solve b1 <|> solve b2
 
 solve :: Board -> Maybe Board
 solve board 
   = pruneBoard board 
   >>= solve'
-  where
-    solve' :: Board -> Maybe Board
-    solve' b
-      | isDeadEnd b  = Nothing
-      | isValid b    = Just b
-      | otherwise    = 
-        let (b1, b2) = nextChoices b
-        in solve b1 <|> solve b2
 
 solveFromString :: String -> Maybe String
 solveFromString cs 
@@ -188,7 +207,7 @@ solveFromString cs
 -- Parsing a Board --
 
 parseCell :: Int -> String -> Maybe Cell
-parseCell mx "." = return $ Choices [1..mx]
+parseCell mx "." = return $ Choices $ Set.fromAscList [1..mx]
 parseCell mx cs  
   = readIntMaybe cs
   >>= return . Fixed
@@ -205,8 +224,8 @@ parseBoard cs = do
   brd     <- mapM (parseCellRow (m * n)) sboard
   return (brd, (m, n))
 
-make3x3 :: String -> String
-make3x3 
+makeString3x3 :: String -> String
+makeString3x3 
   = unlines 
   . ((:) "3 3") 
   . map (intersperse ' ') 
