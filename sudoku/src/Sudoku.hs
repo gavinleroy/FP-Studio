@@ -1,4 +1,19 @@
-module Sudoku where
+{- 
+ - Gavin Gray, University of Utah SP21
+ - Sudoku Solver FP-Studio CS 6963
+ -
+ - This implementation expects a Sudoku board
+ - to ONLY contain integers. This could however
+ - be abstracted for a Cell to contain a 
+ - (Set String), in which case letters
+ - could also be used for the puzzle. 
+ - -}
+
+module Sudoku 
+  ( solveFromString
+  , makeString3x3
+  )
+  where
   
 import Control.Applicative        ((<|>))
 import Data.Function              (on)
@@ -78,6 +93,7 @@ isValid (b, mxn)
   =  all isUnique (rows b) 
   && all isUnique (cols b)
   && all isUnique (blocks mxn b)
+  -- No Choices left
   && null [() | (Choices _) <- (concat b)]
 
 isDeadEnd :: Board -> Bool
@@ -115,25 +131,27 @@ uniqueCells
   . filter (not . isFixed . snd)
   . zip [1..]
 
-pruneCellByKnown :: IntSet -> Cell -> Maybe Cell
-pruneCellByKnown ns (Choices xs) = toCell $ Set.difference xs ns
-pruneCellByKnown _ x = return x
-
 pruneRowByKnown :: Row Cell -> Maybe (Row Cell)
-pruneRowByKnown cells = mapM (pruneCellByKnown knowncells) cells
-  where knowncells = Set.fromList [n | Fixed n <- cells]
+pruneRowByKnown cells = mapM pruneCellByKnown cells
+  where 
+    knowncells = Set.fromList [n | Fixed n <- cells]
+
+    pruneCellByKnown :: Cell -> Maybe Cell
+    pruneCellByKnown (Choices xs) = toCell $ Set.difference xs knowncells
+    pruneCellByKnown x            = return x
+
 
 pruneRowByUnique :: Row Cell -> Maybe (Row Cell)
 pruneRowByUnique cells = case uniqueChoices of
   [] -> return cells
-  _  -> mapM pruneCellMore cells 
+  _  -> mapM pruneCellByUnique cells 
   where
     uniqueChoices = map Set.fromList $ uniqueCells cells
     choiceSet = Set.unions uniqueChoices
 
-    pruneCellMore :: Cell -> Maybe Cell
-    pruneCellMore cell@(Fixed _) = return cell
-    pruneCellMore cell@(Choices ns)
+    pruneCellByUnique :: Cell -> Maybe Cell
+    pruneCellByUnique cell@(Fixed _) = return cell
+    pruneCellByUnique cell@(Choices ns)
       | intersection `elem` uniqueChoices = toCell intersection
       | otherwise                         = return cell
       where intersection = Set.intersection ns choiceSet
@@ -161,7 +179,7 @@ nextChoices (board, size@(m, n))
     , list2Board size $ replCell i rstCell cellList)
   where
     (i, fstCell, rstCell) 
-      = setCell . List.minimumBy (compare `on` (numChoices . snd))
+      = fixCell . List.minimumBy (compare `on` (numChoices . snd))
       . filter (not . isFixed . snd) $ cellList
     cellList = zip [0..] . concat $ board
 
@@ -169,14 +187,14 @@ nextChoices (board, size@(m, n))
     list2Board size'@(m,  n) l = (chunksOf (m * n) l, size')
 
     replCell :: Int -> Cell -> [(Int, Cell)] -> [Cell]
-    replCell i newCell ((p, c):cs) 
+    replCell i newCell ((p, c) : cs) 
       | i == p    = newCell : map snd cs
       | otherwise = c : replCell i newCell cs 
 
-    setCell :: (Int, Cell) -> (Int, Cell, Cell)
-    setCell (_, (Fixed _))   = error "unreachable setCell pattern"
-    setCell (i, (Choices s))
-      | Set.size s < 2       = error "unreachable setCell pattern"
+    fixCell :: (Int, Cell) -> (Int, Cell, Cell)
+    -- fixCell (_, (Fixed _))   = error "unreachable fixCell pattern"
+    fixCell (i, (Choices s))
+      -- | Set.size s < 2       = error "unreachable fixCell pattern"
       | Set.size s == 2      = (i, Fixed fstN, Fixed rstN)
       | otherwise            = (i, Fixed fstN, Choices rstS)
       where
@@ -211,17 +229,17 @@ readIntMaybe :: String -> Maybe Int
 readIntMaybe = readMaybe
 
 parseCell :: Int -> String -> Maybe Cell
-parseCell mx "." = return $ Choices $ Set.fromAscList [1..mx]
+parseCell mx "." = return . Choices . Set.fromAscList $ [1..mx]
 parseCell mx cs  = readIntMaybe cs >>= return . Fixed
 
-parseCellRow :: Int -> String -> Maybe (Row Cell)
-parseCellRow mxn = mapM (parseCell mxn) . words
+parseRow :: Int -> String -> Maybe (Row Cell)
+parseRow mxn = mapM (parseCell mxn) . words
 
 parseBoard :: String -> Maybe Board
 parseBoard cs = do
   (size, sb) <- List.uncons $ lines cs
   [m, n]     <- mapM readIntMaybe . words $ size
-  brd        <- mapM (parseCellRow (m * n)) sb
+  brd        <- mapM (parseRow (m * n)) sb
   return (brd, (m, n))
 
 makeString3x3 :: String -> String
@@ -237,8 +255,13 @@ showBoard :: Board -> String
 showBoard (board, (m, n)) 
   = show m ++ "x" ++ show n  ++ "\n" ++ (intersperseNL $  map row2string board)
   where
+    row2string :: Show a => [a] -> String
     row2string = intersperseS m "  " . map show
+
+    intersperseNL :: [String] -> String
     intersperseNL = intersperseS n "\n"
+
+    intersperseS :: Int -> String -> [String] -> String
     intersperseS num str
       = concat 
       . concat

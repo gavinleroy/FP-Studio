@@ -1,8 +1,8 @@
 module Main where
 
-import System.IO
-import Control.Monad
 import Sudoku
+import System.IO        (readFile)
+import Data.List        (transpose)
 
 -- All boards verified using https://www.sudoku-solutions.com/
 
@@ -62,10 +62,11 @@ hardboard
   , ". . . 7 . . 3 9 6"
   , ". . . . . . . . ."]
 
+ -- 'Mystery' = taken from Wikipedia
 mysteryboard :: String
 mysteryboard 
   = unlines
-  [ "3 3" -- 'Mystery' = taken from Wikipedia
+  [ "3 3"
   , ". . . . 4 . . . ."
   , "1 2 . . . . . 7 3"
   , ". 3 . . . 8 . . ."
@@ -76,28 +77,41 @@ mysteryboard
   , ". 7 . . . . . 2 ."
   , ". . . . . . . . ."]
 
+interleave :: [a] -> [a] -> [a]
+interleave xs ys = concat (transpose [xs, ys])
+
+maybeError :: Maybe String -> String
+maybeError = maybe errormsg id
+
 readFileMain :: IO ()
 readFileMain = do 
   contents <- readFile "./sudoku3x3tests.txt"
-  putStrLn . unlines . map (maybe errormsg id . solveFromString . makeString3x3) . lines $ contents
+  let inputboards = map makeString3x3 . lines $ contents
+  let solvedboards = map (maybeError . solveFromString) inputboards
+  putStrLn . unlines $ interleave inputboards solvedboards
+  -- putStrLn . unlines . map (maybeError . solveFromString . makeString3x3) . lines $ contents
 
-main' :: String -> String -> IO ()
-main' msg board = do
+prog' :: String -> String -> IO ()
+prog' msg board = do
   putStrLn msg
   putStrLn board
-  putStrLn $ maybe errormsg id $ solveFromString board
+  putStrLn . maybeError $ solveFromString board
 
-main :: IO ()
-main = do
+prog :: IO ()
+prog = do
   putStrLn menumsg
   option <- read <$> getLine
   case option of
-    1 -> main' "Easy Board" easyboard
-    2 -> main' "Hard Board" hardboard
-    3 -> main' "Wikipedia Board" mysteryboard
-    4 -> main' "3x2 Board" board3x2
+    1 -> prog' "Easy Board" easyboard
+    2 -> prog' "Hard Board" hardboard
+    3 -> prog' "Wikipedia Board" mysteryboard
+    4 -> prog' "3x2 Board" board3x2
     5 -> readFileMain
-    6 -> undefined
-    7 -> undefined
+    6 -> putStrLn "Not implemented :("
+    7 -> putStrLn "Not implemented :("
     _ -> putStrLn "Invalid option :("
+  prog
+
+main :: IO ()
+main = prog
 
