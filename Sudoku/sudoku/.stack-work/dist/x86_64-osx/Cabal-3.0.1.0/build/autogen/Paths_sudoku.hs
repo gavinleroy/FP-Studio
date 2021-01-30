@@ -29,12 +29,12 @@ version :: Version
 version = Version [0,1,0,0] []
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 
-bindir     = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/bin"
-libdir     = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/lib/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0-Gw1cy3xlTthBALgyCso0Y"
-dynlibdir  = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/lib/x86_64-osx-ghc-8.8.4"
-datadir    = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/share/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0"
-libexecdir = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/libexec/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0"
-sysconfdir = "/Users/gavingray/codefiles/classes/CS6963/SudokuEnv/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/etc"
+bindir     = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/bin"
+libdir     = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/lib/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0-Gw1cy3xlTthBALgyCso0Y"
+dynlibdir  = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/lib/x86_64-osx-ghc-8.8.4"
+datadir    = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/share/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0"
+libexecdir = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/libexec/x86_64-osx-ghc-8.8.4/sudoku-0.1.0.0"
+sysconfdir = "/Users/gavingray/codefiles/classes/CS6963/Sudoku/sudoku/.stack-work/install/x86_64-osx/faf55e386712cfdce85d6ebcd4b614138e8aa116f2486cbafb60a6aef812e7af/8.8.4/etc"
 
 getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: IO FilePath
 getBinDir = catchIO (getEnv "sudoku_bindir") (\_ -> return bindir)
