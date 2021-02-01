@@ -255,8 +255,8 @@ shuffleBoard (b, size@(m, n))
 getSeedRow :: Int -> IO [Int]
 getSeedRow n = shuffle [1..n]
 
-createSudokuFromFilled :: [Int] -> Board -> IO Board
-createSudokuFromFilled [] b = return b
+createSudokuFromFilled :: [Int] -> Board -> Board
+createSudokuFromFilled [] b = b
 createSudokuFromFilled (n':ns) board@(board', size@(m, n)) 
   = if hasUniqueSolution board'' then
       createSudokuFromFilled ns board''
@@ -269,8 +269,8 @@ createSudokuFromFilled (n':ns) board@(board', size@(m, n))
       | i == q    = Choices (Set.fromAscList [1..(m*n)]) : map snd cs
       | otherwise = c : removeith q cs
 
-createFilledBoard :: Int -> Int -> [Int] -> IO Board
-createFilledBoard m n seedrow = return (createMNrows seedstream, (m, n))
+createFilledBoard :: Int -> Int -> [Int] -> Board
+createFilledBoard m n seedrow = (createMNrows seedstream, (m, n))
   where
     seedstream = seeds 1 0
 
@@ -284,14 +284,14 @@ createFilledBoard m n seedrow = return (createMNrows seedstream, (m, n))
       | i `mod` n == 0 = prev + 1 : seeds (prev + 1) (i+1)
       | otherwise      = prev + m : seeds (prev + m) (i+1)
 
+-- NOTE to Professor Flatt: I got rid of the extra
+-- monadic functions and still don't have the do notation :)
 generateBoardAsString :: Int -> Int -> IO String
 generateBoardAsString m n
   = getSeedRow (m*n) >>= \sr
   -> getSeedRow (m*m*n*n) >>= \tr
-  -> createFilledBoard m n sr
-  >>= shuffleBoard
-  >>= createSudokuFromFilled tr
-  >>= return . showBoard
+  -> shuffleBoard (createFilledBoard m n sr)
+  >>= return . showBoard . createSudokuFromFilled tr
   
 -- Parsing a Board --
 
