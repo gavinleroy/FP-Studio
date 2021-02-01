@@ -1,2 +1,3 @@
 *.txt
 .stack-work/
+dist-newstyle/
