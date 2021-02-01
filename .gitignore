@@ -1,2 +1,2 @@
 *.txt
-*/.stack-work
+.stack-work/
