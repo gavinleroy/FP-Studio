@@ -98,6 +98,12 @@ mysteryboard
   , ". 7 . . . . . 2 ."
   , ". . . . . . . . ."]
 
+readMaybeInt :: String -> Maybe Int
+readMaybeInt = readMaybe
+
+readMaybeIL :: String -> Maybe [Int]
+readMaybeIL = mapM readMaybe . words
+
 interleave :: [a] -> [a] -> [a]
 interleave xs ys = concat (transpose [xs, ys])
 
@@ -111,12 +117,15 @@ readFileMain = do
   let solvedboards = map (maybeError . solveFromString) inputboards
   putStrLn . unlines $ interleave inputboards solvedboards
 
-generateMain :: IO String
+generateMain :: IO (Either String String)
 generateMain = do
   putStrLn "Enter block size M N: "
-  [m, n] <- map read . words <$> getLine
-  putStrLn "building random board ..."
-  generateBoardAsString m n
+  ln <- getLine
+  case readMaybeIL ln of
+    (Just (m:n:_)) -> do
+      putStrLn "building random board ..."
+      generateBoardAsString m n >>= return . Right
+    _ -> return $ Left "invalid size entered"
 
 prog' :: String -> String -> IO ()
 prog' msg board = do
@@ -127,16 +136,16 @@ prog' msg board = do
 prog :: IO ()
 prog = do
   putStrLn menumsg
-  option <- read <$> getLine
-  case option of
-    1 -> prog' "Easy Board" easyboard
-    2 -> prog' "Hard Board" hardboard
-    3 -> prog' "Wikipedia Board" mysteryboard
-    4 -> prog' "Invalid Board" nosolboard
-    5 -> prog' "3x2 Board" board3x2
-    6 -> readFileMain
-    7 -> generateMain >>= prog' "Random Board"
-    8 -> generateMain >>= putStrLn
+  option <- getLine
+  case readMaybeInt option of
+    (Just 1) -> prog' "Easy Board" easyboard
+    (Just 2) -> prog' "Hard Board" hardboard
+    (Just 3) -> prog' "Wikipedia Board" mysteryboard
+    (Just 4) -> prog' "Invalid Board" nosolboard
+    (Just 5) -> prog' "3x2 Board" board3x2
+    (Just 6) -> readFileMain
+    (Just 7) -> generateMain >>= either putStrLn (prog' "Random Board")
+    (Just 8) -> generateMain >>= either putStrLn putStrLn
     _ -> putStrLn "Invalid option :("
   prog
 
