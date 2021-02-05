@@ -8,4 +8,5 @@ using various functional languages.
 ## Projects
 
 1. Sudoku board solver and generator.
+2. Santorini player (more pieces to come)
 
