@@ -23,8 +23,8 @@ dependencies:
 - base >= 4.7 && < 5
 - matrix
 - aeson
-- process
-
+- typed-process
+- bytestring
 library:
   source-dirs: src
 

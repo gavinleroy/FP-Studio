@@ -4,24 +4,27 @@ module Main where
 
 -- import Driver
 import System.Environment
-import System.Process
+import System.Process.Typed
 import System.IO
 import GHC.IO.Handle
 import GHC.Generics
 import Data.Aeson
+import Data.Maybe
+import Control.Monad
+import Data.ByteString.Lazy.Internal                   (unpackChars, packChars)
 
 type Player = (Handle, Handle, Int)
 
-data GameBoard = GameBoard 
+data GB = GB
   { players   :: [[[Int]]]
   , spaces    :: [[Int]]
   , turn      :: Int
   } deriving (Generic, Show)
-instance ToJSON GameBoard 
-instance FromJSON GameBoard 
+instance ToJSON GB 
+instance FromJSON GB 
 
-initialboard :: GameBoard
-initialboard = GameBoard
+initialboard :: GB
+initialboard = GB
   { players = []
   , spaces  = replicate 5 $ replicate 5 0
   , turn    = 0 }
@@ -34,43 +37,61 @@ unique :: Eq a => [a] -> Bool
 unique []     = True
 unique (n:ns) = notElem n ns && unique ns
 
-isValid :: GameBoard -> Bool
-isValid GameBoard{players=ps, spaces=bs, turn=t} 
+isValid :: GB -> Bool
+isValid GB{players=ps, spaces=bs, turn=t} 
   = all (<5) (concat bs)
   -- Check player positions
   && all inbounds (concat ps)
   && unique (concat ps)
 
-playerWon :: GameBoard -> Bool
-playerWon GameBoard{players=ps, spaces=bs} 
+playerWon :: GB -> Bool
+playerWon GB{players=ps, spaces=bs} 
   = undefined
 
-play' :: Player -> Player -> GameBoard -> IO Int
-play' p1@(hin, hout, id1) p2@(_,_,id2) gb = do
-  -- TODO insert some actual game logic to modify the board
-  play' p2 p1 gb
+initValid :: GB -> Bool
+initValid = undefined
 
-play :: Player -> Player -> GameBoard -> IO Int
-play p1@(hin, hout, id1) p2@(_,_,id2) gb = do
-  -- TODO insert some actual game logic to modify the board
-  play p2 p1 gb
+sendAndRead :: Player -> GB -> IO GB
+sendAndRead (hin, hout, _) gb = do
+  hPutStrLn hin . unpackChars . encode $ gb
+  hGetLine hout >>= return . maybe initialboard id . decode . packChars
+
+-- For the rest of the gameplay
+play' :: Player -> Player -> GB -> IO Int
+play' p1 p2 gb = do
+  gb' <- sendAndRead p1 gb
+  -- TODO insert validity and winning check logic
+  play' p2 p1 gb'
+
+-- For initial player adding
+play :: Player -> Player -> IO Int
+play p1 p2 = do
+  gb <- sendAndRead p1 initialboard
+  -- TODO logic to check validity
+  gb' <- sendAndRead p2 gb
+  -- TODO logic to check validity
+  play' p1 p2 gb'
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
     [a1, a2] -> do
-      (Just hin1, Just hout1, _, ph) <- 
-        createProcess (shell a1) 
-          { std_out = CreatePipe
-          , std_in = CreatePipe}
-      (Just hin2, Just hout2, _, ph) <- 
-        createProcess (shell a2) 
-          { std_out = CreatePipe
-          , std_in = CreatePipe}
-      winner <- play (hin1, hout1, 1) (hin2, hout2, 2) initialboard 
-      if winner == 1 then
+      let p1' = setStdin createPipe
+              $ setStdout createPipe
+              $ shell a1
+      let p2' = setStdin createPipe
+              $ setStdout createPipe
+              $ shell a2
+      w <- withProcessWait_ p1' $ \p1 -> do
+        withProcessWait_ p2' $ \p2 -> do
+          hSetBuffering (getStdin p1)  LineBuffering
+          hSetBuffering (getStdout p1) LineBuffering
+          hSetBuffering (getStdin p2)  LineBuffering
+          hSetBuffering (getStdout p2) LineBuffering
+          play (getStdin p1, getStdout p1, 1) (getStdin p2, getStdout p2, 2)
+      if w == 1 then
         putStrLn "Player 1 wins!"
       else putStrLn "Player 2 wins!"
-    _        -> error "USAGE: driver <exec1> <exec2>"
+    _ -> error "USAGE: driver <exec1> <exec2>"
 

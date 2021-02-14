@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d99ef203c7f2f05acb01bd3e91851c4d57f226c65619688012df004b75462655
+-- hash: 0445cbc60c0620696a3abb4488adbf985dbef235b78e50269400fa82659155da
 
 name:           santorini
 version:        0.1.0.0
@@ -28,7 +28,6 @@ source-repository head
 
 library
   exposed-modules:
-      Driver
       Player
   other-modules:
       Paths_santorini
@@ -37,8 +36,9 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , matrix
-    , process
+    , typed-process
   default-language: Haskell2010
 
 executable driver
@@ -51,9 +51,10 @@ executable driver
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , matrix
-    , process
     , santorini
+    , typed-process
   default-language: Haskell2010
 
 executable player
@@ -66,9 +67,10 @@ executable player
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , matrix
-    , process
     , santorini
+    , typed-process
   default-language: Haskell2010
 
 test-suite player-test
@@ -82,7 +84,8 @@ test-suite player-test
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , matrix
-    , process
     , santorini
+    , typed-process
   default-language: Haskell2010
