@@ -19,6 +19,10 @@ import Data.ByteString.Lazy.Internal          (unpackChars, packChars)
 
 import qualified Player as P
 
+newtype Player = Player
+  { ps :: [(Int, Int)]
+  } deriving (Generic, Show)
+
 data GB = GB
   { players :: [[[Int]]]
   , spaces  :: [[Int]]
@@ -32,9 +36,8 @@ basicI :: [P.Move]
 basicI = [P.idM]
 
 basicM :: [P.Move]
-basicM = [P.move, P.idM]
+basicM = [P.move, P.build, P.idM]
 
--- TODO get rid of this and handle stuff on your own
 initialboard :: GB
 initialboard = GB
   { players = []
@@ -59,31 +62,41 @@ convertF (ps, sp, t) = GB
   , spaces = toLists sp 
   , turn = t }
 
-doAct :: (P.GameBoard -> P.GameBoard) -> IO ()
-doAct f = readJSONBoard >>= printJSONBoard . doPlay f 
+doAct :: (ToJSON b, FromJSON b) 
+  => (b -> a) -> (a -> b) -> (a -> a) 
+  -> IO ()
+doAct c2 cf f = readOBJ >>= printOBJ . doPlay c2 cf f 
 
-doPlay :: (P.GameBoard -> P.GameBoard) -> GB -> GB
-doPlay f = convertF . f . convert2
+doPlay :: (b -> a) -> (a -> b) 
+  -> (a -> a) -> b -> b
+doPlay c2 cf f = cf . f . c2
 
-readJSONBoard :: IO GB
-readJSONBoard
+readOBJ :: FromJSON a => IO a
+readOBJ
   = getLine <&> 
-  fromMaybe (error "player got invalid board")
+  fromMaybe (error "invalid input")
   . decode 
   . packChars
 
-printJSONBoard :: GB -> IO ()
-printJSONBoard gb
+printOBJ :: ToJSON a => a -> IO ()
+printOBJ x
   = sequence_ 
-  [ putStrLn . unpackChars . encode $ gb
+  [ putStrLn . unpackChars . encode $ x
+  , hFlush stdout
+  , writeFile "trace.txt" . unpackChars . encode $ x
   , hFlush stdout ]
 
 play :: [P.Move] -> IO ()
-play cs = sequence_ [ doAct (P.turn cs) , play cs ]
+play cs 
+  = sequence_ 
+  [ doAct convert2 convertF (P.turn cs) 
+  , play cs ]
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stdin LineBuffering
-  sequence_ [ doAct (P.initplayer basicI), play basicM ]
+  sequence_ 
+    [ doAct id id P.initplayer
+    , play basicM ]
   
