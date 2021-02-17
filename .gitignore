@@ -1,6 +1,8 @@
 *.txt
 *.hs
 *.o
+*.zip
+*.tgz
 .stack-work/
 dist-newstyle/
 given-binaries/
