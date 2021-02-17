@@ -1,3 +1,7 @@
 *.txt
+*.hs
+*.o
 .stack-work/
 dist-newstyle/
+given-binaries/
+
