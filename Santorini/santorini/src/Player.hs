@@ -175,6 +175,7 @@ turn (c:cs) ([p1, op], matr, t)
   where 
     (_, (p1', matr',_)) 
       = maximumBy (compare `on` fst) 
+      -- = head
       . map rankBoard
       . appMove c cs $ (p1, matr, op)
 

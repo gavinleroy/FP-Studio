@@ -82,8 +82,6 @@ printOBJ :: ToJSON a => a -> IO ()
 printOBJ x
   = sequence_ 
   [ putStrLn . unpackChars . encode $ x
-  , hFlush stdout
-  , writeFile "trace.txt" . unpackChars . encode $ x
   , hFlush stdout ]
 
 play :: [P.Move] -> IO ()
