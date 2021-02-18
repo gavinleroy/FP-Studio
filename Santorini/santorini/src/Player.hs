@@ -16,16 +16,14 @@ module Player
   , idM
   ) where
 
-import Control.Monad                           (join)
-import Data.Function                           (on)
-import Data.List                               ((\\), maximumBy)
-import Data.Matrix                             (Matrix)
-import GHC.Generics
-
-import SantoriniDefs
-import SantoriniUtils
-import PlayerStrategy
-
+import            Control.Monad                  (join)
+import            Data.Function                  (on)
+import            Data.List                      ((\\), maximumBy)
+import            Data.Matrix                    (Matrix)
+import            GHC.Generics
+import            SantoriniDefs
+import            SantoriniUtils
+import            PlayerStrategy
 import qualified Data.Matrix as Matrix
 
 -- Moves --
@@ -61,13 +59,13 @@ turn (c:cs) ([p1, op], matr, t)
   where 
     (_, (p1', matr',_)) 
       = maximumBy (compare `on` fst) 
-      . map rankBoard
+      . map rankboard
       . appMove c cs $ (p1, matr, op)
 
 initplayer :: Players -> Players
 initplayer = addPlayer
 
--- Testing Functions --
+-- Testing Helpers --
 
 testCont :: [Move] -> GameBoard -> [String]
 testCont (c:cs) (p1:op:_, matr,_)

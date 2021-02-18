@@ -9,7 +9,7 @@ module SantoriniDefs where
 import Data.Matrix                               (Matrix)
 
 -- Data Definitions --
---
+
 type Pos       = (Int, Int)
 type Player    = [Pos]
 type Players   = [Player]
@@ -18,6 +18,7 @@ type Turn      = Int
 type Board     = Matrix Height
 type GameBoard = (Players, Board, Turn)
 
+-- NOTE the first player in the tuple has the turn
 type BState = (Player, Board, Player)
 newtype Move = M ([Move] -> BState -> [BState])
 

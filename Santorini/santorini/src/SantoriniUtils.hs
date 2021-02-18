@@ -6,10 +6,9 @@
 
 module SantoriniUtils where
 
-import Data.Char                                 (intToDigit)
-import Data.Matrix                               (Matrix)
-import Data.List                                 ((\\))
-
+import           Data.Char                       (intToDigit)
+import           Data.Matrix                     (Matrix)
+import           Data.List                       ((\\))
 import qualified Data.Matrix as Matrix
 
 import SantoriniDefs
@@ -110,6 +109,15 @@ isWin :: BState -> Bool
 isWin ([p1, p2],m,_) 
   = getPos p1 m == 3 
   || getPos p2 m == 3
+
+couldWin :: BState -> Bool
+couldWin (p@[p1, p2],m,op@[op1, op2]) 
+  = any ((==3) . flip getPos m) 
+      (foldr (:) (mNeighbors m p1 (p2:op))
+      (mNeighbors m p2 (p1:op)))
+  || (==) 0 (length
+      (foldr (:) (mNeighbors m op1 (op2:p))
+      (mNeighbors m op2 (op1:p))))
 
 -- IO GameBoard --
 

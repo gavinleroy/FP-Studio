@@ -32,9 +32,6 @@ instance ToJSON GB
 instance FromJSON GB 
 
 -- Player Cont Types --
-basicI :: [P.Move]
-basicI = [P.idM]
-
 basicM :: [P.Move]
 basicM = [P.move, P.build, P.idM]
 
