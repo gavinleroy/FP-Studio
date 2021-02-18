@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0445cbc60c0620696a3abb4488adbf985dbef235b78e50269400fa82659155da
+-- hash: 6f40ab79f2a21de995f91933da76030cb9e229ab92a04e46650d0e79bc9a9512
 
 name:           santorini
 version:        0.1.0.0
@@ -29,6 +29,9 @@ source-repository head
 library
   exposed-modules:
       Player
+      PlayerStrategy
+      SantoriniDefs
+      SantoriniUtils
   other-modules:
       Paths_santorini
   hs-source-dirs:
