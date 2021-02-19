@@ -61,6 +61,9 @@ testmatr = Matrix.fromLists
 
 -- Utilities --
 
+flipBS :: BState -> BState
+flipBS (p,m,op) = (op,m,p)
+
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf _ [] = []
 chunksOf n ns = take n ns : chunksOf n (drop n ns)
@@ -117,7 +120,15 @@ couldWin (p@[p1, p2],m,op@[op1, op2])
       (mNeighbors m p2 (p1:op)))
   || (==) 0 (length
       (foldr (:) (mNeighbors m op1 (op2:p))
-      (mNeighbors m op2 (op1:p))))
+        (mNeighbors m op2 (op1:p))))
+
+couldElevate :: BState -> Bool
+couldElevate (p@[p1,p2],m,op)
+  = not . null . (++) (f p1 p2) $ f p2 p1
+  where f p p' =
+          filter ((> getPos p m) 
+            . flip getPos m) 
+          $ mNeighbors m p (p':op)
 
 -- IO GameBoard --
 

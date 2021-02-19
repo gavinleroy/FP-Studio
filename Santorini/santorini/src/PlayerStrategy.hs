@@ -11,16 +11,16 @@ module PlayerStrategy
 
 import Data.List                                 (minimumBy)
 import Data.Function                             (on)
-
 import SantoriniDefs
 import SantoriniUtils
 
 type Rule = ((Int, BState) -> (Int, BState))
 
-winscore          =  1000000
-losescore         = -50000
-poswinscore       =  10
-closescore        =  2
+winscore          =  100
+losescore         = -50
+poswinscore       =  7
+closescore        =  4
+oplowscore        =  2
 
 rules :: Rule
 rules 
@@ -29,7 +29,7 @@ rules
   . dontlose
   . stayclose
   . dontfall
-  -- . keepoplow
+  -- . keepoplow -- I lose more with this enabled
 
 winrule :: Rule
 winrule t@(n, bs)
@@ -44,21 +44,23 @@ stayclose t@(n, bs@([p1, p2],_,_))
   | otherwise          = t
 
 dontlose :: Rule
-dontlose t@(n, bs@(p1,m,op)) 
-  | couldWin (op,m,p1) = (n + losescore, bs)
+dontlose t@(n, bs) 
+  | couldWin (flipBS bs) = (n + losescore, bs)
   | otherwise          = t 
 
 setupwin :: Rule
-setupwin t@(n, bs@(p,m,op)) 
+setupwin t@(n, bs) 
   | couldWin bs = (n + poswinscore, bs)
   | otherwise          = t 
 
 dontfall :: Rule
 dontfall (n, bs@([p1,p2],m,_)) 
-  = (n + 2 * (getPos p1 m + getPos p2 m), bs)
+  = (n + 3 * (getPos p1 m + getPos p2 m), bs)
 
 keepoplow :: Rule
-keepoplow = undefined
+keepoplow t@(n, bs)
+  | couldElevate (flipBS bs) = (n + oplowscore, bs)
+  | otherwise                = t
 
 rankboard :: BState -> (Int, BState)
 rankboard = rules . (,) 0
