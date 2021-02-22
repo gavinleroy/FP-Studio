@@ -22,6 +22,7 @@ type GameBoard = (Players, Board, Turn)
 type BState = (Player, Board, Player)
 newtype Move = M ([Move] -> BState -> [BState])
 
-appMove :: Move -> [Move] -> BState -> [BState]
-appMove (M f) = f
+appMove :: [Move] -> BState -> [BState]
+appMove [] = pure
+appMove ((M f) : cs) = f cs
 

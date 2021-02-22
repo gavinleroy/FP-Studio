@@ -32,17 +32,17 @@ idM :: Move
 idM = M (\_ bs -> [bs]) 
 
 build :: Move
-build = M (\(c:cs) (p@[p1, p2], mat, op) -> 
-    let g = appMove c cs . (p,,op)
+build = M (\cs (p@[p1, p2], mat, op) -> 
+    let g = appMove cs . (p,,op)
         mats' = map (incPos mat) (bNeighbors mat p1 (p2:op)) in 
         concatMap g mats')
 
 move :: Move
-move = M (\(c:cs) ([p1, p2], mat, op) -> 
+move = M (\cs ([p1, p2], mat, op) -> 
     let g = (\p2' p1' -> 
               let bs = ([p1',p2'],mat,op) in
               if isWin bs then [bs]
-              else appMove c cs bs)
+              else appMove cs bs)
         p1s = mNeighbors mat p1 (p2:op)
         p2s = mNeighbors mat p2 (p1:op) in
         foldr (:) (concatMap (g p2) p1s) (concatMap (g p1)  p2s))
@@ -54,13 +54,13 @@ addPlayer ps@[p] = [p, determineNewPlayerPos (boardPositions \\ p)]
 -- Entry Points --
 
 turn :: [Move] -> GameBoard -> GameBoard
-turn (c:cs) ([p1, op], matr, t) 
+turn cs ([p1, op], matr, t) 
   = ([op, p1'], matr', t + 1)
   where 
     (_, (p1', matr',_)) 
       = maximumBy (compare `on` fst) 
       . map rankboard
-      . appMove c cs $ (p1, matr, op)
+      . appMove cs $ (p1, matr, op)
 
 initplayer :: Players -> Players
 initplayer = addPlayer
@@ -68,8 +68,8 @@ initplayer = addPlayer
 -- Testing Helpers --
 
 testCont :: [Move] -> GameBoard -> [String]
-testCont (c:cs) (p1:op:_, matr,_)
-  = map bsshow $ appMove c cs (p1, matr, op)
+testCont cs (p1:op:_, matr,_)
+  = map bsshow $ appMove cs (p1, matr, op)
 
 pCont :: [Move] -> GameBoard -> IO ()
 pCont cs = mapM_ putStrLn . testCont cs
