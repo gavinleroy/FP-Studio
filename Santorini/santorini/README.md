@@ -1,4 +1,4 @@
-# santorini
+# Santorini
 
 ## Basic Player
 
