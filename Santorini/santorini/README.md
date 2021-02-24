@@ -22,5 +22,5 @@ Other important libraries include:
 `stack build`
 
 The executables are found in 
-`santorini/.stack-work/install/x86_64-osx/202c490e26cd90901fb3c6e9985a679cadc0e3588f4baafa7a56b5c0320dbd69/8.10.3/bin`
+`./.stack-work/install/x86_64-osx/202c490e26cd90901fb3c6e9985a679cadc0e3588f4baafa7a56b5c0320dbd69/8.10.3/bin`
 
