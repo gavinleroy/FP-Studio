@@ -32,14 +32,8 @@ instance ToJSON GB
 instance FromJSON GB 
 
 -- Player Cont Types --
-basicM :: [P.Move]
-basicM = [P.move, P.build, P.idM]
-
-initialboard :: GB
-initialboard = GB
-  { players = []
-  , spaces  = replicate 5 $ replicate 5 0
-  , turn    = 0 }
+basicaction :: [P.PAction]
+basicaction = [P.move, P.build]
 
 lt :: [a] -> (a, a)
 lt [x, y] = (x, y)
@@ -73,25 +67,22 @@ readOBJ
   = getLine <&> 
   fromMaybe (error "invalid input")
   . decode 
-  . packChars
+  . packChars -- (String -> ByteString)
 
 printOBJ :: ToJSON a => a -> IO ()
-printOBJ x
-  = sequence_ 
-  [ putStrLn . unpackChars . encode $ x
-  , hFlush stdout ]
+printOBJ x 
+  = (putStrLn . unpackChars . encode $ x)
+  >> hFlush stdout 
 
-play :: [P.Move] -> IO ()
+play :: [P.PAction] -> IO ()
 play cs 
-  = sequence_ 
-  [ doAct convert2 convertF (P.turn cs) 
-  , play cs ]
+  = doAct convert2 convertF (P.turn cs) 
+  >> play cs
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stdin LineBuffering
-  sequence_ 
-    [ doAct id id P.initplayer
-    , play basicM ]
+  doAct id id P.initplayer
+  >> play basicaction
   

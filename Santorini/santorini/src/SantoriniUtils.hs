@@ -64,6 +64,9 @@ testmatr = Matrix.fromLists
 flipBS :: BState -> BState
 flipBS (p,m,op) = (op,m,p)
 
+swapPPos :: BState -> BState
+swapPPos ([p1, p2],m,p) = ([p2, p1],m,p)
+
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf _ [] = []
 chunksOf n ns = take n ns : chunksOf n (drop n ns)
@@ -76,28 +79,10 @@ inbounds (x, y)
   && y < 6
 
 boardPositions :: [Pos]
-boardPositions = (,) <$> [1..5] <*> [1..5]
-
-neighbors :: Pos -> [Pos]
-neighbors (x, y)
-  = [(x + x', y + y') 
-  | x' <- [-1..1]
-  , y' <- [-1..1]
-  , (x' /= 0 || y' /= 0) 
-  && inbounds (x + x', y + y')]
-
-bNeighbors :: Matrix Int -> Pos -> [Pos] -> [Pos]
-bNeighbors m p op
-  = flip (\\) op
-  $ filter ((< 4) 
-    . flip getPos m) 
-  . neighbors $ p
-
-mNeighbors :: Matrix Int -> Pos -> [Pos] -> [Pos]
-mNeighbors m p
-  = filter ((< getPos p m + 2) 
-    . flip getPos m ) 
-  . bNeighbors m p
+boardPositions 
+  = (,) 
+  <$> [1..5] 
+  <*> [1..5]
 
 getPos :: Pos -> Matrix a -> a
 getPos = uncurry Matrix.unsafeGet
@@ -108,19 +93,63 @@ setPos = Matrix.unsafeSet
 incPos :: Num a => Matrix a -> Pos -> Matrix a
 incPos m p = setPos ((+1) $ getPos p m) p m 
 
+-- Neighbor Helpers --
+
+neighbors :: Pos -> [Pos]
+neighbors (x, y)
+  = [(x + x', y + y') 
+  | x' <- [-1..1]
+  , y' <- [-1..1]
+  , (x' /= 0 || y' /= 0) 
+  && inbounds (x + x', y + y')]
+
+bNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
+bNeighbors' m p op
+  = flip (\\) op
+  $ filter ((< 4) 
+    . flip getPos m) 
+  . neighbors $ p
+
+bNeighbors :: BState -> [Pos]
+bNeighbors ([p1, p2], m, op)
+  = bNeighbors' m p1 (p2:op)
+
+mNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
+mNeighbors' m p
+  = filter ((< getPos p m + 2) 
+    . flip getPos m ) 
+  . bNeighbors' m p
+
+mNeighbors :: BState -> [Pos]
+mNeighbors ([p1, p2], m, op)
+  = mNeighbors' m p1 (p2:op)
+
+-- Using Neighbor Helpers with BState --
+-- mNeighborsXXX :: BState -> [Pos]
+mNeighborsP1 = mNeighbors
+mNeighborsP2 = mNeighbors . swapPPos
+mNeighborsOP1 = mNeighbors . flipBS
+mNeighborsOP2 = mNeighbors . swapPPos . flipBS
+
+-- Strategy Utilities --
+
 isWin :: BState -> Bool
-isWin ([p1, p2],m,_) 
+isWin bs@([p1, p2],m,_) 
   = getPos p1 m == 3 
   || getPos p2 m == 3
+  || null ((++)
+      (take 1 (mNeighborsOP1 bs)) 
+      (take 1 (mNeighborsOP2 bs)))
 
 couldWin :: BState -> Bool
-couldWin (p@[p1, p2],m,op@[op1, op2]) 
+couldWin bs@(p@[p1, p2],m,op@[op1, op2]) 
   = any ((==3) . flip getPos m) 
-      (foldr (:) (mNeighbors m p1 (p2:op))
-      (mNeighbors m p2 (p1:op)))
-  || (==) 0 (length
-      (foldr (:) (mNeighbors m op1 (op2:p))
-        (mNeighbors m op2 (op1:p))))
+    (foldr (:) 
+      (mNeighborsP1 bs) 
+      (mNeighborsP2 bs))
+  || null ((++)
+      (take 1 (mNeighborsOP1 bs)) 
+      (take 1 (mNeighborsOP2 bs)))
 
 couldElevate :: BState -> Bool
 couldElevate (p@[p1,p2],m,op)
@@ -128,7 +157,7 @@ couldElevate (p@[p1,p2],m,op)
   where f p p' =
           filter ((> getPos p m) 
             . flip getPos m) 
-          $ mNeighbors m p (p':op)
+          $ mNeighbors' m p (p':op)
 
 -- IO GameBoard --
 

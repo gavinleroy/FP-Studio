@@ -25,6 +25,8 @@ dependencies:
 - aeson
 - typed-process
 - bytestring
+- dlist
+- relude
 library:
   source-dirs: src
 
