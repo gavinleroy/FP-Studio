@@ -17,6 +17,8 @@ Other important libraries include:
 
 * `src/SantoriniUtils.hs`
 
+* `src/PlayerStrategy.hs`
+
 ### Building Basic Player
 
 `stack build`
