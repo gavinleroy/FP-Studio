@@ -1,0 +1,102 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: f7ee9805c0d20981dd2bc8248745bb22077d091ebca0e42db72bee7f694524df
+
+name:           santorini
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/gavinleroy/FP-Studio/santorini#readme>
+homepage:       https://github.com/gavinleroy/FP-Studio#readme
+bug-reports:    https://github.com/gavinleroy/FP-Studio/issues
+author:         Gavin Gray
+maintainer:     gavinleroy6@gmail.com
+copyright:      Gavin Gray
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/gavinleroy/FP-Studio
+  subdir: santorini
+
+library
+  exposed-modules:
+      Player
+      PlayerStrategy
+      SantoriniDefs
+      SantoriniUtils
+  other-modules:
+      Paths_santorini
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , dlist
+    , matrix
+    , relude
+    , typed-process
+  default-language: Haskell2010
+
+executable driver
+  main-is: DriverMain.hs
+  other-modules:
+      Paths_santorini
+  hs-source-dirs:
+      driverapp
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , dlist
+    , matrix
+    , relude
+    , santorini
+    , typed-process
+  default-language: Haskell2010
+
+executable player
+  main-is: PlayerMain.hs
+  other-modules:
+      Paths_santorini
+  hs-source-dirs:
+      playerapp
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , dlist
+    , matrix
+    , relude
+    , santorini
+    , typed-process
+  default-language: Haskell2010
+
+test-suite player-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_santorini
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , dlist
+    , matrix
+    , relude
+    , santorini
+    , typed-process
+  default-language: Haskell2010

@@ -1,0 +1,65 @@
+name:                santorini
+version:             0.1.0.0
+github:              "gavinleroy/FP-Studio/santorini"
+license:             BSD3
+author:              "Gavin Gray"
+maintainer:          "gavinleroy6@gmail.com"
+copyright:           "Gavin Gray"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/gavinleroy/FP-Studio/santorini#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- matrix
+- aeson
+- typed-process
+- bytestring
+- dlist
+- relude
+library:
+  source-dirs: src
+
+executables:
+  player:
+    main:                PlayerMain.hs
+    source-dirs:         playerapp
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - santorini
+
+  driver:
+    main:                DriverMain.hs
+    source-dirs:         driverapp
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    dependencies:
+    - santorini
+
+tests:
+  player-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - santorini
