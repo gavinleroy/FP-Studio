@@ -1,25 +1,69 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 {- Gavin Gray u1040250
  - University of Utah
  - Spring 2021, CS 6963
- - Assignment 2, Santorini
+ - Assignment 3, Santorini Cards
  - -}
 
 module SantoriniDefs where
 
-import           Relude.Extra.Tuple                        (fmapToSnd)
-import           Data.Matrix                               (Matrix)
+import           Data.Aeson
 import           Data.DList                                (DList)
-import qualified Data.DList as DList 
+import           Data.HashMap.Internal                     (keys)
+import           Data.Matrix                               (Matrix)
+import           Relude.Extra.Tuple                        (fmapToSnd)
+import qualified Data.DList  as DList 
+import qualified Data.Matrix as Matrix
 
 -- Data Definitions --
 
 type Height    = Int
 type Turn      = Int
 type Pos       = (Int, Int)
-type Player    = [Pos]
+
+data Player = Player
+  { card   :: String
+  , tokens :: [(Int, Int)] } 
+  | PrePlayer { card :: String }
+  deriving (Eq, Show)
+
+instance ToJSON Player where
+  toJSON Player{..} = object 
+    [ "card"   .= card
+    , "tokens" .= tokens ]
+  toJSON PrePlayer{..} = object 
+    [ "card"   .= card ]
+
+instance FromJSON Player where
+  parseJSON = withObject "player" $ \o -> do
+    if "tokens" `elem` keys o
+      then Player <$> o .: "card" <*> o .: "tokens" 
+      else PrePlayer <$> o .: "card"
+
 type Players   = [Player]
 type Board     = Matrix Height
-type GameBoard = (Players, Board, Turn)
+data GameBoard = GameBoard
+  { players :: [Player]
+  , spaces  :: Matrix Height
+  , turn    :: Turn 
+  } deriving (Eq, Show)
+
+instance ToJSON GameBoard where
+  toJSON GameBoard{players, spaces=sps, turn} = object
+    [ "players" .= players
+    , "spaces"  .= Matrix.toLists sps
+    , "turn"    .= turn ]
+
+instance FromJSON GameBoard where
+  parseJSON = withObject "gameboard" $ \o -> do
+    players <- o .: "players"
+    sps <- o .: "spaces"
+    let spaces = Matrix.fromLists sps
+    turn <- o .: "turn"
+    return GameBoard{..}
 
 -- NOTE the first player in the tuple has the turn
 type BState = (Player, Board, Player)

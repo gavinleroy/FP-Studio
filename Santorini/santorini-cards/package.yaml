@@ -21,12 +21,17 @@ description:         Please see the README on GitHub at <https://github.com/gavi
 
 dependencies:
 - base >= 4.7 && < 5
+- unordered-containers < 3
+- containers
 - matrix
 - aeson
 - typed-process
 - bytestring
 - dlist
 - relude
+- HUnit
+- text
+
 library:
   source-dirs: src
 
@@ -55,7 +60,7 @@ executables:
 
 tests:
   player-test:
-    main:                Spec.hs
+    main:                Test.hs
     source-dirs:         test
     ghc-options:
     - -threaded

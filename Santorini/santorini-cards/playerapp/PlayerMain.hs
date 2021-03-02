@@ -1,73 +1,54 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-
  - Gavin Gray u1040250
  - University of Utah
  - Spring 2021, CS 6963
- - Assignment 2, Santorini
+ - Assignment 3, Santorini Cards
  - -}
 
 module Main where
 
-import System.IO
-import Data.Aeson
-import Data.Maybe
-import Data.Matrix                            (fromLists, toLists)
-import GHC.Generics
-import Data.Functor                           ((<&>))
-import Data.ByteString.Lazy.Internal          (unpackChars, packChars)
+import           Data.Aeson
+import           Data.ByteString.Lazy.Internal          (unpackChars, packChars)
+import           Data.Functor                           ((<&>))
+import           GHC.Generics
+import           Data.Map                               (Map)
+import           Data.Maybe
+import           System.IO
+import qualified Data.Matrix as Matrix 
+import qualified Data.Map    as Map
+import qualified Player      as P
 
-import qualified Player as P
-
-newtype Player = Player
-  { ps :: [(Int, Int)]
-  } deriving (Generic, Show)
-
-data GB = GB
-  { players :: [[[Int]]]
-  , spaces  :: [[Int]]
-  , turn    :: Int 
-  } deriving (Generic, Show)
-instance ToJSON GB 
-instance FromJSON GB 
-
--- Player Cont Types --
+-- Player Cont Types -- -- TODO REMOVE
 basicaction :: [P.PAction]
 basicaction = [P.move, P.build]
 
-lt :: [a] -> (a, a)
-lt [x, y] = (x, y)
+cardmap :: Map String [P.PAction]
+cardmap -- TODO create continuations for each card
+  = Map.insert "Apollo"     basicaction
+  . Map.insert "Artemis"    basicaction
+  . Map.insert "Atlas"      basicaction
+  . Map.insert "Demeter"    basicaction
+  . Map.insert "Hephastus"  basicaction
+  . Map.insert "Minotaur"   basicaction
+  . Map.insert "Pan"        basicaction
+  . Map.insert "Prometheus" basicaction
+  $ Map.empty
 
-lf :: (a, a) -> [a]
-lf (x, y) = [x, y]
-
-convert2 :: GB -> P.GameBoard
-convert2 GB{players=ps, spaces=sp, turn=t} =
-  ( P.chunksOf 2 . map lt . concat $ ps
-  , fromLists sp
-  , t)
-
-convertF :: P.GameBoard -> GB
-convertF (ps, sp, t) = GB
-  { players = P.chunksOf 2 . map lf . concat $ ps
-  , spaces = toLists sp 
-  , turn = t }
-
-doAct :: (ToJSON b, FromJSON b) 
-  => (b -> a) -> (a -> b) -> (a -> a) 
-  -> IO ()
-doAct c2 cf f = readOBJ >>= printOBJ . doPlay c2 cf f 
-
-doPlay :: (b -> a) -> (a -> b) 
-  -> (a -> a) -> b -> b
-doPlay c2 cf f = cf . f . c2
+doAct :: (ToJSON a, FromJSON a) => (a -> a) -> IO ()
+doAct f = readOBJ >>= printOBJ . f 
 
 readOBJ :: FromJSON a => IO a
 readOBJ
+  -- = do 
+  -- ln <- getLine
+  -- hPutStrLn stderr ln -- TODO stop doing this
+  -- return . fromMaybe (error "invalid input") . decode . packChars $ ln
   = getLine <&> 
   fromMaybe (error "invalid input")
   . decode 
-  . packChars -- (String -> ByteString)
+  . packChars
 
 printOBJ :: ToJSON a => a -> IO ()
 printOBJ x 
@@ -76,13 +57,13 @@ printOBJ x
 
 play :: [P.PAction] -> IO ()
 play cs 
-  = doAct convert2 convertF (P.turn cs) 
+  = doAct (P.playerturn cs) 
   >> play cs
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stdin LineBuffering
-  doAct id id P.initplayer
+  doAct P.initplayer
   >> play basicaction
   

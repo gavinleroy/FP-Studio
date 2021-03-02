@@ -13,43 +13,43 @@ import qualified Data.Matrix as Matrix
 
 import SantoriniDefs
 
-testgb1 :: GameBoard
-testgb1 = 
-  ( [[(1, 1), (3, 2)]]
-  , Matrix.fromLists 
-    $ replicate 5 
-    $ replicate 5 0
-  , 1 )
+-- testgb1 :: GameBoard
+-- testgb1 = 
+--   ( [[(1, 1), (3, 2)]]
+--   , Matrix.fromLists 
+--     $ replicate 5 
+--     $ replicate 5 0
+--   , 1 )
 
-testgb2 :: GameBoard
-testgb2 = 
-  ( [[(2, 3), (4, 4)], [(2, 5), (3, 5)]]
-  , Matrix.fromLists
-    [ [0, 0, 0, 0, 2]
-    , [1, 1, 2, 0, 0]
-    , [1, 0, 0, 3, 0]
-    , [0, 0, 3, 0, 0]
-    , [0, 0, 0, 1, 4] ]
-  , 18 )
+-- testgb2 :: GameBoard
+-- testgb2 = 
+--   ( [[(2, 3), (4, 4)], [(2, 5), (3, 5)]]
+--   , Matrix.fromLists
+--     [ [0, 0, 0, 0, 2]
+--     , [1, 1, 2, 0, 0]
+--     , [1, 0, 0, 3, 0]
+--     , [0, 0, 3, 0, 0]
+--     , [0, 0, 0, 1, 4] ]
+--   , 18 )
 
-testgb3 :: GameBoard
-testgb3 = 
-  ( [[(1, 1), (1, 2)], [(1, 3), (1, 4)]]
-  , Matrix.fromLists 
-    $ replicate 5 
-    $ replicate 5 0
-  , 0 )
+-- testgb3 :: GameBoard
+-- testgb3 = 
+--   ( [[(1, 1), (1, 2)], [(1, 3), (1, 4)]]
+--   , Matrix.fromLists 
+--     $ replicate 5 
+--     $ replicate 5 0
+--   , 0 )
 
-testgb4 :: GameBoard
-testgb4 = 
-  ( [[(1, 1), (1, 2)], [(2, 1), (2, 2)]]
-  , Matrix.fromLists
-    [ [0, 0, 4, 0, 2]
-    , [1, 1, 4, 0, 0]
-    , [4, 4, 4, 3, 0]
-    , [0, 0, 3, 0, 0]
-    , [0, 0, 0, 1, 4] ]
-  , 18 )
+-- testgb4 :: GameBoard
+-- testgb4 = 
+--   ( [[(1, 1), (1, 2)], [(2, 1), (2, 2)]]
+--   , Matrix.fromLists
+--     [ [0, 0, 4, 0, 2]
+--     , [1, 1, 4, 0, 0]
+--     , [4, 4, 4, 3, 0]
+--     , [0, 0, 3, 0, 0]
+--     , [0, 0, 0, 1, 4] ]
+--   , 18 )
 
 testmatr :: Matrix Int
 testmatr = Matrix.fromLists
@@ -64,8 +64,8 @@ testmatr = Matrix.fromLists
 flipBS :: BState -> BState
 flipBS (p,m,op) = (op,m,p)
 
-swapPPos :: BState -> BState
-swapPPos ([p1, p2],m,p) = ([p2, p1],m,p)
+-- swapPPos :: BState -> BState
+-- swapPPos ([p1, p2],m,p) = ([p2, p1],m,p)
 
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf _ [] = []
@@ -110,9 +110,9 @@ bNeighbors' m p op
     . flip getPos m) 
   . neighbors $ p
 
-bNeighbors :: BState -> [Pos]
-bNeighbors ([p1, p2], m, op)
-  = bNeighbors' m p1 (p2:op)
+-- bNeighbors :: BState -> [Pos]
+-- bNeighbors ([p1, p2], m, op)
+--   = bNeighbors' m p1 (p2:op)
 
 mNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
 mNeighbors' m p
@@ -120,63 +120,63 @@ mNeighbors' m p
     . flip getPos m ) 
   . bNeighbors' m p
 
-mNeighbors :: BState -> [Pos]
-mNeighbors ([p1, p2], m, op)
-  = mNeighbors' m p1 (p2:op)
+-- mNeighbors :: BState -> [Pos]
+-- mNeighbors ([p1, p2], m, op)
+--   = mNeighbors' m p1 (p2:op)
 
 -- Using Neighbor Helpers with BState --
 -- mNeighborsXXX :: BState -> [Pos]
-mNeighborsP1 = mNeighbors
-mNeighborsP2 = mNeighbors . swapPPos
-mNeighborsOP1 = mNeighbors . flipBS
-mNeighborsOP2 = mNeighbors . swapPPos . flipBS
+-- mNeighborsP1 = mNeighbors
+-- mNeighborsP2 = mNeighbors . swapPPos
+-- mNeighborsOP1 = mNeighbors . flipBS
+-- mNeighborsOP2 = mNeighbors . swapPPos . flipBS
 
 -- Strategy Utilities --
 
-isWin :: BState -> Bool
-isWin bs@([p1, p2],m,_) 
-  = getPos p1 m == 3 
-  || getPos p2 m == 3
-  || null ((++)
-      (take 1 (mNeighborsOP1 bs)) 
-      (take 1 (mNeighborsOP2 bs)))
+-- isWin :: BState -> Bool
+-- isWin bs@([p1, p2],m,_) 
+--   = getPos p1 m == 3 
+--   || getPos p2 m == 3
+--   || null ((++)
+--       (take 1 (mNeighborsOP1 bs)) 
+--       (take 1 (mNeighborsOP2 bs)))
 
-couldWin :: BState -> Bool
-couldWin bs@(p@[p1, p2],m,op@[op1, op2]) 
-  = any ((==3) . flip getPos m) 
-    (foldr (:) 
-      (mNeighborsP1 bs) 
-      (mNeighborsP2 bs))
-  || null ((++)
-      (take 1 (mNeighborsOP1 bs)) 
-      (take 1 (mNeighborsOP2 bs)))
+-- couldWin :: BState -> Bool
+-- couldWin bs@(p@[p1, p2],m,op@[op1, op2]) 
+--   = any ((==3) . flip getPos m) 
+--     (foldr (:) 
+--       (mNeighborsP1 bs) 
+--       (mNeighborsP2 bs))
+--   || null ((++)
+--       (take 1 (mNeighborsOP1 bs)) 
+--       (take 1 (mNeighborsOP2 bs)))
 
-couldElevate :: BState -> Bool
-couldElevate (p@[p1,p2],m,op)
-  = not . null . (++) (f p1 p2) $ f p2 p1
-  where f p p' =
-          filter ((> getPos p m) 
-            . flip getPos m) 
-          $ mNeighbors' m p (p':op)
+-- couldElevate :: BState -> Bool
+-- couldElevate (p@[p1,p2],m,op)
+--   = not . null . (++) (f p1 p2) $ f p2 p1
+--   where f p p' =
+--           filter ((> getPos p m) 
+--             . flip getPos m) 
+--           $ mNeighbors' m p (p':op)
 
 -- IO GameBoard --
 
-gbshow :: GameBoard -> String
-gbshow ([[p1, p2], [p1', p2']], mat, _) 
-  = show 
-  $ Matrix.setElem '#' p2'
-  $ Matrix.setElem '#' p1'
-  $ Matrix.setElem '#' p2
-  $ Matrix.setElem '#' p1
-  $ Matrix.fromLists 
-  $ map (map intToDigit)
-  $ Matrix.toLists mat
+-- gbshow :: GameBoard -> String
+-- gbshow ([[p1, p2], [p1', p2']], mat, _) 
+--   = show 
+--   $ Matrix.setElem '#' p2'
+--   $ Matrix.setElem '#' p1'
+--   $ Matrix.setElem '#' p2
+--   $ Matrix.setElem '#' p1
+--   $ Matrix.fromLists 
+--   $ map (map intToDigit)
+--   $ Matrix.toLists mat
 
-bsshow :: BState -> String
-bsshow ([p1, p2], mat,_) 
-  = show 
-  $ Matrix.setElem '#' p2
-  $ Matrix.setElem '#' p1
-  $ Matrix.fromLists 
-  $ map (map intToDigit)
-  $ Matrix.toLists mat
+-- bsshow :: BState -> String
+-- bsshow ([p1, p2], mat,_) 
+--   = show 
+--   $ Matrix.setElem '#' p2
+--   $ Matrix.setElem '#' p1
+--   $ Matrix.fromLists 
+--   $ map (map intToDigit)
+--   $ Matrix.toLists mat
