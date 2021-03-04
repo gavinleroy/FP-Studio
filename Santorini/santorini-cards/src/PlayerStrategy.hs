@@ -1,3 +1,6 @@
+{-# LANGUAGE NamedFieldPuns #-}
+-- {-# LANGUAGE RecordWildCards #-}
+
 {- Gavin Gray u1040250
  - University of Utah
  - Spring 2021, CS 6963
@@ -14,59 +17,60 @@ import Data.Function                             (on)
 import SantoriniDefs
 import SantoriniUtils
 
-type Rule = ((Int, BState) -> (Int, BState))
+type Rule = ((Int, GameBoard) -> (Int, GameBoard))
 
--- winscore          =  100
--- losescore         = -50
--- poswinscore       =  7
--- closescore        =  4
--- oplowscore        =  2
+winscore          =  100
+losescore         = -50
+poswinscore       =  7
+closescore        =  4
+oplowscore        =  2
 
--- rules :: Rule
--- rules 
---   = winrule
---   . setupwin
---   . dontlose
---   . stayclose
---   . dontfall
---   -- . keepoplow -- I lose more with this enabled
+heightmultiplier  = 3
 
--- winrule :: Rule
--- winrule t@(n, bs)
---   | isWin bs  = (n + winscore, bs)
---   | otherwise = t
+rules :: Rule
+rules 
+  = winrule
+  . setupwin
+  . dontlose
+  . stayclose
+  . dontfall
+  -- . keepoplow -- I lose more with this enabled
 
--- stayclose :: Rule
--- stayclose t@(n, bs@([p1, p2],_,_)) 
---   | dist p1 p2 == 4
---     || dist p1 p2 == 2 = (n + closescore `div` 2, bs)
---   | dist p1 p2 == 3    = (n + closescore, bs)
---   | otherwise          = t
+winrule :: Rule
+winrule t@(n, gb@GB{})
+  | isWin gb  = (n + winscore, gb)
+  | otherwise = t
 
--- dontlose :: Rule
--- dontlose t@(n, bs) 
---   | couldWin (flipBS bs) = (n + losescore, bs)
---   | otherwise          = t 
+stayclose :: Rule
+stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}]}) 
+  | dist p1 p2 == 4
+    || dist p1 p2 == 2 = (n + closescore `div` 2, gb)
+  | dist p1 p2 == 3    = (n + closescore, gb)
+  | otherwise          = t
 
--- setupwin :: Rule
--- setupwin t@(n, bs) 
---   | couldWin bs = (n + poswinscore, bs)
---   | otherwise          = t 
+dontlose :: Rule
+dontlose t@(n, gb) 
+  | couldWin (flipPlrsGB gb) = (n + losescore, gb)
+  | otherwise                = t 
 
--- dontfall :: Rule
--- dontfall (n, bs@([p1,p2],m,_)) 
---   = (n + 3 * (getPos p1 m + getPos p2 m), bs)
+setupwin :: Rule
+setupwin t@(n, gb) 
+  | couldWin gb = (n + poswinscore, gb)
+  | otherwise   = t 
 
--- keepoplow :: Rule
--- keepoplow t@(n, bs)
---   | couldElevate (flipBS bs) = (n + oplowscore, bs)
---   | otherwise                = t
+dontfall :: Rule
+dontfall (n, gb@GB{players=[Player{tokens=[p1, p2]}],spaces}) 
+  = (n + heightmultiplier * (getPos p1 spaces + getPos p2 spaces), gb)
 
-rankboard :: BState -> (Int, BState)
-rankboard = undefined
--- rankboard = rules . (,) 0
+keepoplow :: Rule
+keepoplow t@(n, gb)
+  | couldElevate (flipPlrsGB gb) = (n + oplowscore, gb)
+  | otherwise                    = t
 
--- -- Placing Strategy --
+rankboard :: GameBoard -> (Int, GameBoard)
+rankboard = rules . (,) 0
+
+-- Placing Strategy --
 
 center :: Pos
 center = (3, 3)
@@ -81,7 +85,7 @@ pair x y = [x, y]
 determineNewPlayerPos :: [Pos] -> [Pos]
 determineNewPlayerPos ps 
   = minimumBy (compare `on` (\[p1, p2] 
-      -> dist p1 center + dist p2 center)) 
+      -> dist p1 center ^ 2 + dist p2 center ^ 2)) 
         $ filter (\[p1, p2] 
           -> p1 /= p2 && p1 < p2
           && dist p1 p2 == 3) 

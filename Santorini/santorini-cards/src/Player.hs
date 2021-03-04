@@ -18,6 +18,7 @@ module Player
   ) where
 
 import           Control.Monad                  (join)
+import           Data.DList                     (DList)
 import           Data.Function                  (on)
 import           Data.List                      ((\\), maximumBy)
 import           Data.Matrix                    (Matrix)
@@ -27,7 +28,7 @@ import           SantoriniUtils
 import           PlayerStrategy
 import qualified Data.Matrix as Matrix
 
-type PAction = Action BState
+type PAction = Action GameBoard
 
 -- Moves --
 
@@ -37,8 +38,8 @@ build = undefined
 --   let expandbmats = \bs@(_,mat,_) -> (swapsnd, map (incPos mat) (bNeighbors bs))
 --   in nextS $ expandS expandbmats bstate
 
-move :: PAction
-move = undefined
+basicmove :: PAction
+basicmove = undefined
 -- move = Action $ \bstate -> 
 --   let p1f = (,) swapfst . getplayerpos
 --       p2f = (,) swapfst . getplayerpos . swapPPos
@@ -52,48 +53,25 @@ move = undefined
 addPlayer :: Players -> Players
 addPlayer [] = error "received empty list"
 addPlayer [PrePlayer{card}, op@PrePlayer{}] 
-  = [ op
-  , Player
-    { card
+  = [ op , Player { card
     , tokens = determineNewPlayerPos boardPositions } ]
 
 addPlayer [PrePlayer{card}, op@Player{tokens}] 
-  = [ op
-  , Player
-    { card
+  = [ op , Player { card
     , tokens = determineNewPlayerPos (boardPositions \\ tokens) } ]
 addPlayer [Player{}, Player{}] = error "received two players during setup"
 
-
 -- Entry Points --
 
+terminate :: DList GameBoard -> GameBoard
+terminate 
+  = snd 
+  . maximumBy (compare `on` fst) 
+  . fmap rankboard
+
 playerturn :: [PAction] -> GameBoard -> GameBoard
-playerturn cs = id
--- turn cs ([p, op], matr, t) 
---   = ([op, p'], matr', t + 1)
---   where 
---     (_, (p', matr',_)) 
---       = maximumBy (compare `on` fst) 
---       . map rankboard
---       . nextS 
---       . state cs 
---       $ (p, matr, op)
+playerturn ks = nextS . state ks terminate
 
 initplayer :: Players -> Players
 initplayer = addPlayer
-
--- Testing Helpers --
-
--- testCont :: [PAction] -> GameBoard -> [String]
--- testCont cs (p1:op:_, matr,_)
---   = map bsshow $ nextS $ state cs (p1, matr, op)
-
--- pCont :: [PAction] -> GameBoard -> IO ()
--- pCont cs = mapM_ putStrLn . testCont cs
-
--- testTurn :: [PAction] -> GameBoard -> String
--- testTurn cs = gbshow . turn cs
-
--- pTurn :: [PAction] -> GameBoard -> IO ()
--- pTurn cs = putStrLn . testTurn cs
 

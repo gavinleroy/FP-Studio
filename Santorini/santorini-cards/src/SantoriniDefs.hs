@@ -45,14 +45,14 @@ instance FromJSON Player where
 
 type Players   = [Player]
 type Board     = Matrix Height
-data GameBoard = GameBoard
+data GameBoard = GB
   { players :: [Player]
   , spaces  :: Matrix Height
   , turn    :: Turn 
   } deriving (Eq, Show)
 
 instance ToJSON GameBoard where
-  toJSON GameBoard{players, spaces=sps, turn} = object
+  toJSON GB{players, spaces=sps, turn} = object
     [ "players" .= players
     , "spaces"  .= Matrix.toLists sps
     , "turn"    .= turn ]
@@ -63,9 +63,8 @@ instance FromJSON GameBoard where
     sps <- o .: "spaces"
     let spaces = Matrix.fromLists sps
     turn <- o .: "turn"
-    return GameBoard{..}
+    return GB{..}
 
--- NOTE the first player in the tuple has the turn
 type BState = (Player, Board, Player)
 
 swapfst :: BState -> Player -> BState
@@ -77,21 +76,25 @@ swapsnd (p,b,op) b' = (p,b',op)
 swaptrd :: BState -> Player -> BState
 swaptrd (p,b,op) op' = (p,b,op')
 
-newtype Action a = Action (State a -> [a])
+newtype Action a = Action (State a -> a)
 
-newtype State a = ST ([Action a], DList a)
+data State a = ST
+  { kont   :: [Action a]
+  , states :: DList a 
+  , term   :: DList a -> a }
 
--- instance Functor State where
---   fmap f (ST (_, dlist)) = ST ([], fmap f dlist)
 instance Foldable State where
-  foldMap f (ST (_, dlist)) = foldMap f dlist
-  foldr f z (ST (_, dlist)) = foldr f z dlist
+  foldMap f ST{states} = foldMap f states
+  foldr f z ST{states} = foldr f z states
 
-state :: [Action a] -> a -> State a
-state cs a = ST (cs, DList.singleton a)
+state :: [Action a] -> (DList a -> a)  -> a -> State a
+state ks f a = ST 
+  { kont   = ks
+  , states = DList.singleton a
+  , term   = f }
 
 getstateS :: State a -> DList a
-getstateS (ST s) = snd s
+getstateS = states
 
 minBy :: Ord b => (a -> b) -> a -> a -> a
 minBy f a1 a2
@@ -99,33 +102,39 @@ minBy f a1 a2
   | otherwise   = a2
 
 -- The shorter cont stack is chosen in case of fast return
+-- The first termination function is chosen for simplicity
 fuseS :: State a -> State a -> State a
-fuseS (ST (cs1, as)) (ST (cs2, bs)) 
-  = ST (cs, as `DList.append` bs)
-  where cs = minBy length cs1 cs2
+fuseS ST{kont=ks1,states=as,term} 
+      ST{kont=ks2,states=bs} 
+ = ST { kont=ks
+      , states = as `DList.append` bs
+      , term }
+  where ks = minBy length ks1 ks2
 
 mapS :: (a -> a) -> State a -> State a
-mapS f (ST (cs, ls)) 
-  = ST (cs, DList.map f ls)
+mapS f ST{states=ls, ..} 
+  = ST {states = DList.map f ls, ..}
 
 mapZip :: Functor f => (a -> b) -> f a -> f (a, b)
 mapZip  = fmapToSnd
 
 expandS :: (b -> (b -> a -> b, [a])) -> State b -> State b
-expandS g (ST (cs, bs)) 
-  = ST $ (,) cs
-  $ DList.concat 
-  $ DList.toList
-  $ (\(bs', (g', as)) ->
-      fmap (g' bs') (DList.fromList as)) 
-  <$> mapZip g bs
+expandS g ST {states=bs, ..} 
+  = ST { states = 
+    DList.concat 
+    $ DList.toList
+    $ (\(bs', (g', as)) ->
+        fmap (g' bs') (DList.fromList as)) 
+    <$> mapZip g bs
+  , .. }
 
-nextS :: State a -> [a]
-nextS (ST ((Action f) : cs, as))   
-  = f $ ST (cs, as)
-nextS (ST ([], as)) 
-  = DList.toList as
+nextS :: State a -> a
+nextS ST{kont=[], states=as, term} 
+  = term as
+nextS ST{kont = (Action f) : ks, ..} 
+  = f ST{ kont=ks, .. }
 
-exitS :: State a -> [a]
-exitS (ST (_, as)) = DList.toList as
+ -- MUST HAVE AT LEAST ONE ELEMENT
+exitS :: State a -> a
+exitS ST {states} = DList.head states
 

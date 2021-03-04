@@ -41,10 +41,6 @@ doAct f = readOBJ >>= printOBJ . f
 
 readOBJ :: FromJSON a => IO a
 readOBJ
-  -- = do 
-  -- ln <- getLine
-  -- hPutStrLn stderr ln -- TODO stop doing this
-  -- return . fromMaybe (error "invalid input") . decode . packChars $ ln
   = getLine <&> 
   fromMaybe (error "invalid input")
   . decode 
