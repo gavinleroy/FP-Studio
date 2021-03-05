@@ -1,3 +1,6 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+
 {- Gavin Gray u1040250
  - University of Utah
  - Spring 2021, CS 6963
@@ -64,8 +67,13 @@ testmatr = Matrix.fromLists
 flipBS :: BState -> BState
 flipBS (p,m,op) = (op,m,p)
 
--- swapPPos :: BState -> BState
--- swapPPos ([p1, p2],m,p) = ([p2, p1],m,p)
+flipPlrsGB :: GameBoard -> GameBoard
+flipPlrsGB GB{players=[p1, p2], ..} 
+  = GB{players=[p2, p1], ..}
+
+swapPPos :: GameBoard -> GameBoard
+swapPPos GB{players=[Player{card, tokens=[p1, p2]}, p], ..} 
+  = GB{ players = [Player{card, tokens=[p2, p1]}, p], ..}
 
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf _ [] = []
@@ -110,9 +118,12 @@ bNeighbors' m p op
     . flip getPos m) 
   . neighbors $ p
 
--- bNeighbors :: BState -> [Pos]
--- bNeighbors ([p1, p2], m, op)
---   = bNeighbors' m p1 (p2:op)
+bNeighbors :: GameBoard -> [Pos]
+bNeighbors gb@GB{spaces}
+  = bNeighbors' spaces p1 (p2:op)
+  where
+    [p1, p2] = myplayer gb
+    op       = opplayer gb
 
 mNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
 mNeighbors' m p
@@ -120,16 +131,27 @@ mNeighbors' m p
     . flip getPos m ) 
   . bNeighbors' m p
 
--- mNeighbors :: BState -> [Pos]
--- mNeighbors ([p1, p2], m, op)
---   = mNeighbors' m p1 (p2:op)
+mNeighbors :: GameBoard -> [Pos]
+mNeighbors gb@GB{spaces}
+  = mNeighbors' spaces p1 (p2:op)
+  where 
+    [p1, p2] = myplayer gb
+    op       = opplayer gb
 
 -- Using Neighbor Helpers with BState --
--- mNeighborsXXX :: BState -> [Pos]
--- mNeighborsP1 = mNeighbors
--- mNeighborsP2 = mNeighbors . swapPPos
--- mNeighborsOP1 = mNeighbors . flipBS
--- mNeighborsOP2 = mNeighbors . swapPPos . flipBS
+-- mNeighborsXXX :: GameBoard -> [Pos]
+mNeighborsP1  = mNeighbors
+mNeighborsP2  = mNeighbors . swapPPos
+mNeighborsOP1 = mNeighbors . flipPlrsGB
+mNeighborsOP2 = mNeighbors . swapPPos . flipPlrsGB
+
+-- GameBoard Utilities --
+
+myplayer :: GameBoard -> [Pos]
+myplayer GB{players= [ Player{ tokens } , _ ]} = tokens
+
+opplayer :: GameBoard -> [Pos]
+opplayer GB{players= [ _, Player{ tokens } ]} = tokens
 
 -- Strategy Utilities --
 
@@ -161,22 +183,17 @@ mNeighbors' m p
 
 -- IO GameBoard --
 
--- gbshow :: GameBoard -> String
--- gbshow ([[p1, p2], [p1', p2']], mat, _) 
---   = show 
---   $ Matrix.setElem '#' p2'
---   $ Matrix.setElem '#' p1'
---   $ Matrix.setElem '#' p2
---   $ Matrix.setElem '#' p1
---   $ Matrix.fromLists 
---   $ map (map intToDigit)
---   $ Matrix.toLists mat
+gbshow :: GameBoard -> String
+gbshow GB
+  { players=[Player{tokens=[p1, p2]}
+    , Player{tokens=[p1', p2']}]
+  , spaces }
+  = show 
+  $ Matrix.setElem '#' p2'
+  $ Matrix.setElem '#' p1'
+  $ Matrix.setElem '#' p2
+  $ Matrix.setElem '#' p1
+  $ Matrix.fromLists 
+  $ map (map intToDigit)
+  $ Matrix.toLists spaces
 
--- bsshow :: BState -> String
--- bsshow ([p1, p2], mat,_) 
---   = show 
---   $ Matrix.setElem '#' p2
---   $ Matrix.setElem '#' p1
---   $ Matrix.fromLists 
---   $ map (map intToDigit)
---   $ Matrix.toLists mat
