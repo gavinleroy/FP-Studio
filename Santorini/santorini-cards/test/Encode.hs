@@ -30,7 +30,7 @@ test2 = TestCase (assertEqual
   test2_out 
   (obj_json test2_inp))
 
-test3_inp = GameBoard 
+test3_inp = GB
     { players = 
       [ Player{ card = "Artemis", tokens = [(2, 3), (4, 4)] }
       , Player{ card = "Prometheus", tokens = [(2, 5), (3, 5)] } ]

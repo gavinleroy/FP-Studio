@@ -22,7 +22,7 @@ import qualified Player      as P
 
 -- Player Cont Types -- -- TODO REMOVE
 basicaction :: [P.PAction]
-basicaction = [P.move, P.build]
+basicaction = [P.basicmove, P.basicbuild]
 
 cardmap :: Map String [P.PAction]
 cardmap -- TODO create continuations for each card

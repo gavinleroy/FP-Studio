@@ -65,17 +65,6 @@ instance FromJSON GameBoard where
     turn <- o .: "turn"
     return GB{..}
 
-type BState = (Player, Board, Player)
-
-swapfst :: BState -> Player -> BState
-swapfst (p,b,op) p' = (p',b,op)
-
-swapsnd :: BState -> Board -> BState
-swapsnd (p,b,op) b' = (p,b',op)
-
-swaptrd :: BState -> Player -> BState
-swaptrd (p,b,op) op' = (p,b,op')
-
 newtype Action a = Action (State a -> a)
 
 data State a = ST
@@ -100,6 +89,9 @@ minBy :: Ord b => (a -> b) -> a -> a -> a
 minBy f a1 a2
   | f a1 < f a2 = a1
   | otherwise   = a2
+
+applyS :: [b -> (b -> a -> b, [a])] -> State b -> State b
+applyS fs sb = foldr1 fuseS . map (`expandS` sb) $ fs
 
 -- The shorter cont stack is chosen in case of fast return
 -- The first termination function is chosen for simplicity
@@ -135,6 +127,7 @@ nextS ST{kont = (Action f) : ks, ..}
   = f ST{ kont=ks, .. }
 
  -- MUST HAVE AT LEAST ONE ELEMENT
+ 
 exitS :: State a -> a
 exitS ST {states} = DList.head states
 

@@ -13,8 +13,10 @@ module Player
   , chunksOf
   , initplayer
   , playerturn
-  , move
-  , build
+  , basicmove
+  -- , getplayerpos
+  -- , testgb
+  , basicbuild
   ) where
 
 import           Control.Monad                  (join)
@@ -30,38 +32,77 @@ import qualified Data.Matrix as Matrix
 
 type PAction = Action GameBoard
 
--- Moves --
+-- BUILDING --
 
-build :: PAction
-build = undefined
--- build = Action $ \bstate -> 
---   let expandbmats = \bs@(_,mat,_) -> (swapsnd, map (incPos mat) (bNeighbors bs))
---   in nextS $ expandS expandbmats bstate
+basicbuild :: PAction
+basicbuild = Action $ \gb -> 
+  let expandSpaces = \gb' -> (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
+  in nextS $ expandS expandSpaces gb
+
+atlasbuild :: PAction
+atlasbuild = Action $ \gb ->
+  undefined
+
+demeterbuild :: PAction
+demeterbuild = Action $ \gb ->
+  undefined
+
+hephastusbuild :: PAction
+hephastusbuild = Action $ \gb ->
+  undefined
+
+prometheusbuild :: PAction
+prometheusbuild = Action $ \gb ->
+  undefined
+
+-- MOVING --
+
+basicmove' :: State GameBoard -> State GameBoard
+basicmove' = applyS [p1f, p2f]
+  where
+    p1f = (,) newMyPlayerPos . getplayerpos
+    p2f = p1f . swapMyPlayerPos
+    getplayerpos :: GameBoard -> [[Pos]]
+    getplayerpos gb' = map 
+      (\x_ -> 
+        (\x y -> 
+          [x, y]) x_ ((!! 1) $ myplayer gb')) 
+      (mNeighborsP1 gb') -- [Pos]
 
 basicmove :: PAction
-basicmove = undefined
--- move = Action $ \bstate -> 
---   let p1f = (,) swapfst . getplayerpos
---       p2f = (,) swapfst . getplayerpos . swapPPos
---       -- previously above this was the body of `getplayerpos` but hlint suggested the
---       -- above as more conventional. :shrug:
---       -- zipWith (\x y -> [x, y]) (mNeighbors bs') (repeat p2)
---       getplayerpos bs'@([_, p2],_,_) = map (\x_ -> (\x y -> [x, y]) x_ p2) (mNeighborsP1 bs')
---       fused = fuseS (expandS p1f bstate) (expandS p2f bstate)
---       in if any isWin fused then exitS fused else nextS fused 
+basicmove = Action $ \sgb -> 
+      let sgb' = basicmove' sgb
+      in if any isWin sgb' then exitS sgb' else nextS sgb' 
+
+appolomove :: PAction
+appolomove = Action $ \gb ->
+  undefined
+
+artemismove :: PAction
+artemismove = Action $ \gb ->
+  undefined
+
+minotaurmove :: PAction
+minotaurmove = Action $ \gb ->
+  undefined
+
+prometheusmove :: PAction
+prometheusmove = Action $ \gb ->
+  undefined
+
+-- ADD PLAYER INTERFACE --
 
 addPlayer :: Players -> Players
 addPlayer [] = error "received empty list"
 addPlayer [PrePlayer{card}, op@PrePlayer{}] 
   = [ op , Player { card
     , tokens = determineNewPlayerPos boardPositions } ]
-
 addPlayer [PrePlayer{card}, op@Player{tokens}] 
   = [ op , Player { card
     , tokens = determineNewPlayerPos (boardPositions \\ tokens) } ]
 addPlayer [Player{}, Player{}] = error "received two players during setup"
 
--- Entry Points --
+-- ENTRY POINTS --
 
 terminate :: DList GameBoard -> GameBoard
 terminate 
@@ -74,4 +115,13 @@ playerturn ks = nextS . state ks terminate
 
 initplayer :: Players -> Players
 initplayer = addPlayer
+
+-- TEST GB --
+
+testgb = GB
+    { players = 
+      [ Player{ card = "Artemis", tokens = [(2, 3), (4, 4)] }
+      , Player{ card = "Prometheus", tokens = [(2, 5), (3, 5)] } ]
+    , spaces = Matrix.fromLists [[0,0,0,0,2],[1,1,2,0,0],[1,0,0,3,0],[0,0,3,0,0],[0,0,0,1,4]]
+    , turn = 18 }
 

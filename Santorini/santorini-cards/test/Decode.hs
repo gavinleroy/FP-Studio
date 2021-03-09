@@ -35,7 +35,7 @@ test3_inp = "{\"players\": \
   \ {\"card\":\"Prometheus\",\"tokens\":[[2,5],[3,5]]}], \
   \ \"spaces\":[[0,0,0,0,2],[1,1,2,0,0],[1,0,0,3,0],[0,0,3,0,0],[0,0,0,1,4]], \
   \ \"turn\":18}"
-test3_out = GameBoard 
+test3_out = GB
     { players = 
       [ Player{ card = "Artemis", tokens = [(2, 3), (4, 4)] }
       , Player{ card = "Prometheus", tokens = [(2, 5), (3, 5)] } ]

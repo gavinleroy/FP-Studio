@@ -50,7 +50,7 @@ stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}]})
 
 dontlose :: Rule
 dontlose t@(n, gb) 
-  | couldWin (flipPlrsGB gb) = (n + losescore, gb)
+  | couldWin (swapPlayers gb) = (n + losescore, gb)
   | otherwise                = t 
 
 setupwin :: Rule
@@ -64,7 +64,7 @@ dontfall (n, gb@GB{players=[Player{tokens=[p1, p2]}],spaces})
 
 keepoplow :: Rule
 keepoplow t@(n, gb)
-  | couldElevate (flipPlrsGB gb) = (n + oplowscore, gb)
+  | couldElevate (swapPlayers gb) = (n + oplowscore, gb)
   | otherwise                    = t
 
 rankboard :: GameBoard -> (Int, GameBoard)

@@ -64,17 +64,6 @@ testmatr = Matrix.fromLists
 
 -- Utilities --
 
-flipBS :: BState -> BState
-flipBS (p,m,op) = (op,m,p)
-
-flipPlrsGB :: GameBoard -> GameBoard
-flipPlrsGB GB{players=[p1, p2], ..} 
-  = GB{players=[p2, p1], ..}
-
-swapPPos :: GameBoard -> GameBoard
-swapPPos GB{players=[Player{card, tokens=[p1, p2]}, p], ..} 
-  = GB{ players = [Player{card, tokens=[p2, p1]}, p], ..}
-
 chunksOf :: Int -> [a] -> [[a]]
 chunksOf _ [] = []
 chunksOf n ns = take n ns : chunksOf n (drop n ns)
@@ -141,9 +130,9 @@ mNeighbors gb@GB{spaces}
 -- Using Neighbor Helpers with BState --
 -- mNeighborsXXX :: GameBoard -> [Pos]
 mNeighborsP1  = mNeighbors
-mNeighborsP2  = mNeighbors . swapPPos
-mNeighborsOP1 = mNeighbors . flipPlrsGB
-mNeighborsOP2 = mNeighbors . swapPPos . flipPlrsGB
+mNeighborsP2  = mNeighbors . swapMyPlayerPos
+mNeighborsOP1 = mNeighbors . swapPlayers
+mNeighborsOP2 = mNeighbors . swapMyPlayerPos . swapPlayers
 
 -- GameBoard Utilities --
 
@@ -153,33 +142,57 @@ myplayer GB{players= [ Player{ tokens } , _ ]} = tokens
 opplayer :: GameBoard -> [Pos]
 opplayer GB{players= [ _, Player{ tokens } ]} = tokens
 
+swapPlayers :: GameBoard -> GameBoard
+swapPlayers GB{ players = [p1, p2], .. } = GB { players = [p2, p1], .. }
+
+newMyPlayerPos :: GameBoard -> [Pos] -> GameBoard
+newMyPlayerPos GB{ players = [ Player { card, tokens } , op] , ..} newtoks
+  = GB { players=[Player{card, tokens=newtoks}, op], .. }
+
+swapMyPlayerPos :: GameBoard -> GameBoard
+swapMyPlayerPos GB{ players = [ Player { card, tokens = [p1, p2] } , op] , ..} 
+  = GB { players=[Player{card, tokens=[p2, p1]}, op], .. }
+
+newOpPlayerPos :: GameBoard -> [Pos] -> GameBoard
+newOpPlayerPos GB{ players = [ p, Player { card, tokens } ] , ..} newtoks 
+  = GB { players=[p, Player{card, tokens=newtoks}], .. }
+
+swapOpPlayerPos :: GameBoard -> GameBoard
+swapOpPlayerPos = swapPlayers . swapMyPlayerPos . swapPlayers
+
+newSpaces :: GameBoard -> Matrix Height -> GameBoard
+newSpaces GB{..} nm = GB{ spaces=nm, .. }
+
 -- Strategy Utilities --
 
--- isWin :: BState -> Bool
--- isWin bs@([p1, p2],m,_) 
---   = getPos p1 m == 3 
---   || getPos p2 m == 3
---   || null ((++)
---       (take 1 (mNeighborsOP1 bs)) 
---       (take 1 (mNeighborsOP2 bs)))
+isWin :: GameBoard -> Bool
+isWin gb@GB{spaces}
+  = getPos p1 spaces  == 3 
+  || getPos p2 spaces == 3
+  || null ((++)
+      (take 1 (mNeighborsOP1 gb)) 
+      (take 1 (mNeighborsOP2 gb)))
+  where [p1,p2] = myplayer gb
 
--- couldWin :: BState -> Bool
--- couldWin bs@(p@[p1, p2],m,op@[op1, op2]) 
---   = any ((==3) . flip getPos m) 
---     (foldr (:) 
---       (mNeighborsP1 bs) 
---       (mNeighborsP2 bs))
---   || null ((++)
---       (take 1 (mNeighborsOP1 bs)) 
---       (take 1 (mNeighborsOP2 bs)))
+couldWin :: GameBoard -> Bool
+couldWin GB{} -- bs@(p@[p1, p2],m,op@[op1, op2]) 
+ = False
+  -- = any ((==3) . flip getPos m) 
+  --   (foldr (:) 
+  --     (mNeighborsP1 bs) 
+  --     (mNeighborsP2 bs))
+  -- || null ((++)
+  --     (take 1 (mNeighborsOP1 bs)) 
+  --     (take 1 (mNeighborsOP2 bs)))
 
--- couldElevate :: BState -> Bool
--- couldElevate (p@[p1,p2],m,op)
---   = not . null . (++) (f p1 p2) $ f p2 p1
---   where f p p' =
---           filter ((> getPos p m) 
---             . flip getPos m) 
---           $ mNeighbors' m p (p':op)
+couldElevate :: GameBoard -> Bool
+couldElevate GB{} -- (p@[p1,p2],m,op)
+  = False
+  -- = not . null . (++) (f p1 p2) $ f p2 p1
+  -- where f p p' =
+  --         filter ((> getPos p m) 
+  --           . flip getPos m) 
+  --         $ mNeighbors' m p (p':op)
 
 -- IO GameBoard --
 
