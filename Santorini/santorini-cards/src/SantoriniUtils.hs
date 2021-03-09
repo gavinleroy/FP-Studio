@@ -168,6 +168,12 @@ swapOpPlayerPos = swapPlayers . swapMyPlayerPos . swapPlayers
 newSpaces :: GameBoard -> Matrix Height -> GameBoard
 newSpaces GB{..} nm = GB{ spaces=nm, .. }
 
+incTurn :: GameBoard -> GameBoard
+incTurn GB{turn,..} = GB{turn = turn+1, ..}
+
+mycard :: GameBoard -> String
+mycard = card . head . players
+
 -- Strategy Utilities --
 
 isWin :: GameBoard -> Bool

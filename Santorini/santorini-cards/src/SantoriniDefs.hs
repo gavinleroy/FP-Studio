@@ -100,10 +100,17 @@ applyS fs sb = foldr1 fuseS . map (`expandS` sb) $ fs
 fuseS :: State a -> State a -> State a
 fuseS ST{kont=ks1,states=as,term} 
       ST{kont=ks2,states=bs} 
- = ST { kont=ks
-      , states = as `DList.append` bs
-      , term }
-  where ks = minBy length ks1 ks2
+  | length ks1 /= length ks2 
+    = error "you fused continuations of a different size"
+  | otherwise = ST 
+    { kont= ks1 
+    , states = as `DList.append` bs
+    , term }
+ -- TODO put this code back in :)
+ -- = ST { kont=ks
+ --      , states = as `DList.append` bs
+ --      , term }
+ --  where ks = minBy length ks1 ks2
 
 mapS :: (a -> a) -> State a -> State a
 mapS f ST{states=ls, ..} 
@@ -129,6 +136,11 @@ nextS ST{kont = (Action f) : ks, ..}
   = f ST{ kont=ks, .. }
 
  -- MUST HAVE AT LEAST ONE ELEMENT
+
+exitIfS :: (a -> Bool) -> State a -> a
+exitIfS f sa
+  | any f sa = exitS f sa
+  | otherwise = nextS sa
  
 exitS :: (a -> Bool) -> State a -> a
 exitS f ST {states} = fromMaybe (error "invalid") $ find f states

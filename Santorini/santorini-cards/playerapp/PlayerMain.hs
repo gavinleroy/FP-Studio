@@ -21,21 +21,6 @@ import qualified Data.Map    as Map
 import qualified Player      as P
 
 -- Player Cont Types -- -- TODO REMOVE
-basicaction :: [P.PAction]
-basicaction = [P.basicmove, P.basicbuild]
-
-cardmap :: Map String [P.PAction]
-cardmap -- TODO create continuations for each card
-  = Map.insert "Apollo"     [P.apollomove, P.basicbuild]
-  . Map.insert "Artemis"    basicaction
-  . Map.insert "Atlas"      basicaction
-  . Map.insert "Demeter"    basicaction
-  . Map.insert "Hephastus"  basicaction
-  . Map.insert "Minotaur"   basicaction
-  . Map.insert "Pan"        basicaction
-  . Map.insert "Prometheus" basicaction
-  $ Map.empty
-
 doAct :: (ToJSON a, FromJSON a) => (a -> a) -> IO ()
 doAct f = readOBJ >>= printOBJ . f 
 
@@ -51,15 +36,12 @@ printOBJ x
   = (putStrLn . unpackChars . encode $ x)
   >> hFlush stdout 
 
-play :: [P.PAction] -> IO ()
-play cs 
-  = doAct (P.playerturn cs) 
-  >> play cs
+play :: IO ()
+play = doAct P.playerturn >> play
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stdin LineBuffering
-  doAct P.initplayer
-  >> play [P.apollomove, P.basicbuild]
+  doAct P.initplayer >> play
   

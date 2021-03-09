@@ -9,15 +9,8 @@
 
 module Player 
   ( module SantoriniDefs 
-  , PAction
-  , chunksOf
   , initplayer
   , playerturn
-  , basicmove
-  , apollomove
-  -- , getplayerpos
-  -- , testgb
-  , basicbuild
   ) where
 
 import           Control.Monad                  (join)
@@ -25,20 +18,44 @@ import           Data.DList                     (DList)
 import           Data.Function                  (on)
 import           Data.List                      ((\\), maximumBy)
 import           Data.Matrix                    (Matrix)
+import           Data.Maybe                     (fromMaybe)
 import           GHC.Generics
 import           SantoriniDefs
 import           SantoriniUtils
 import           PlayerStrategy
+import qualified Data.Map    as Map    
 import qualified Data.Matrix as Matrix
 
 type PAction = Action GameBoard
 
+lookupCM :: String -> [PAction]
+lookupCM
+  = fromMaybe [basicmove, basicbuild]
+  . flip Map.lookup cardmap
+
+cardmap :: Map.Map String [PAction]
+cardmap
+  = Map.fromList 
+  [ ("Apollo"     , [apollomove   , basicbuild]     )
+  , ("Artemis"    , [artemismove  , basicbuild]     )
+  , ("Atlas"      , [basicmove    , atlasbuild]     )
+  , ("Demeter"    , [basicmove    , demeterbuild]   )
+  , ("Hephastus"  , [basicmove    , hephastusbuild] )
+  , ("Minotaur"   , [minotaurmove , basicbuild]     )
+  , ("Pan"        , [basicmove    , basicbuild]     )
+  , ("Prometheus" , [basicmove    , basicbuild]     ) ]
+
 -- BUILDING --
+
+basicbuild' :: State GameBoard -> State GameBoard
+basicbuild' = expandS expandSpaces
+  where
+    expandSpaces gb' =
+      (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
 
 basicbuild :: PAction
 basicbuild = Action $ \gb -> 
-  let expandSpaces = \gb' -> (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
-  in nextS $ expandS expandSpaces gb
+  nextS $ basicbuild' gb
 
 atlasbuild :: PAction
 atlasbuild = Action $ \gb ->
@@ -72,10 +89,7 @@ basicmove' = applyS [p1f, p2f]
 
 basicmove :: PAction
 basicmove = Action $ \sgb -> 
-  let sgb' = basicmove' sgb
-  in if any isWin sgb' 
-  then exitS isWin sgb' 
-  else nextS sgb' 
+  exitIfS isWin $ basicmove' sgb
 
 apolloswap :: GameBoard -> Pos -> GameBoard
 apolloswap GB
@@ -96,12 +110,7 @@ apollomove = Action $ \sgb ->
   let sgb' = basicmove' sgb
       swapOpPos = \gb' -> (apolloswap, occupiedNeighborsP1 gb') 
       sgb'' = fuseS sgb' $ expandS swapOpPos sgb
-  in if any isWin sgb'' 
-  then exitS isWin sgb'' 
-  else nextS sgb'' 
-
--- let expandSpaces = \gb' -> (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
--- in nextS $ expandS expandSpaces gb
+  in exitIfS isWin sgb''
 
 artemismove :: PAction
 artemismove = Action $ \gb ->
@@ -118,7 +127,7 @@ prometheusmove = Action $ \gb ->
 -- ADD PLAYER INTERFACE --
 
 addPlayer :: Players -> Players
-addPlayer [] = error "received empty list"
+addPlayer [] = error "received empty list in addPlayer"
 addPlayer [PrePlayer{card}, op@PrePlayer{}] 
   = [ op , Player { card
     , tokens = determineNewPlayerPos boardPositions } ]
@@ -127,16 +136,24 @@ addPlayer [PrePlayer{card}, op@Player{tokens}]
     , tokens = determineNewPlayerPos (boardPositions \\ tokens) } ]
 addPlayer [Player{}, Player{}] = error "received two players during setup"
 
--- ENTRY POINTS --
-
 terminate :: DList GameBoard -> GameBoard
 terminate 
   = snd 
   . maximumBy (compare `on` fst) 
   . fmap rankboard
 
-playerturn :: [PAction] -> GameBoard -> GameBoard
-playerturn ks = nextS . state ks terminate
+playerturn' :: [PAction] -> GameBoard -> GameBoard
+playerturn' ks 
+  = incTurn 
+  . swapPlayers 
+  . nextS 
+  . state ks terminate
+
+-- ENTRY POINTS --
+
+playerturn :: GameBoard -> GameBoard
+playerturn gb 
+  = playerturn' (lookupCM $ mycard gb) gb
 
 initplayer :: Players -> Players
 initplayer = addPlayer
