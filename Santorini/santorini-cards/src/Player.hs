@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
--- {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
 
 {- Gavin Gray u1040250
  - University of Utah
@@ -14,6 +14,7 @@ module Player
   , initplayer
   , playerturn
   , basicmove
+  , apollomove
   -- , getplayerpos
   -- , testgb
   , basicbuild
@@ -71,12 +72,36 @@ basicmove' = applyS [p1f, p2f]
 
 basicmove :: PAction
 basicmove = Action $ \sgb -> 
-      let sgb' = basicmove' sgb
-      in if any isWin sgb' then exitS sgb' else nextS sgb' 
+  let sgb' = basicmove' sgb
+  in if any isWin sgb' 
+  then exitS isWin sgb' 
+  else nextS sgb' 
 
-appolomove :: PAction
-appolomove = Action $ \gb ->
-  undefined
+apolloswap :: GameBoard -> Pos -> GameBoard
+apolloswap GB
+  { players = 
+    [ Player {card=c1, tokens=[p1, p2]}
+    , Player {card=c2, tokens=[op1, op2]} ]
+  , ..} p
+  | p == op1 = GB {players=
+    [ Player{card=c1, tokens=[op1, p2]}
+    , Player{card=c2, tokens=[p1, op2]} ], ..}
+  | p == op2 = GB {players=
+    [ Player{card=c1, tokens=[op2, p2]}
+    , Player{card=c2, tokens=[op1, p1]} ], ..}
+  | otherwise = error "misuse of apolloswap"
+
+apollomove :: PAction
+apollomove = Action $ \sgb ->
+  let sgb' = basicmove' sgb
+      swapOpPos = \gb' -> (apolloswap, occupiedNeighborsP1 gb') 
+      sgb'' = fuseS sgb' $ expandS swapOpPos sgb
+  in if any isWin sgb'' 
+  then exitS isWin sgb'' 
+  else nextS sgb'' 
+
+-- let expandSpaces = \gb' -> (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
+-- in nextS $ expandS expandSpaces gb
 
 artemismove :: PAction
 artemismove = Action $ \gb ->

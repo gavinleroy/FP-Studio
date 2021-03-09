@@ -26,7 +26,7 @@ basicaction = [P.basicmove, P.basicbuild]
 
 cardmap :: Map String [P.PAction]
 cardmap -- TODO create continuations for each card
-  = Map.insert "Apollo"     basicaction
+  = Map.insert "Apollo"     [P.apollomove, P.basicbuild]
   . Map.insert "Artemis"    basicaction
   . Map.insert "Atlas"      basicaction
   . Map.insert "Demeter"    basicaction
@@ -61,5 +61,5 @@ main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stdin LineBuffering
   doAct P.initplayer
-  >> play basicaction
+  >> play [P.apollomove, P.basicbuild]
   

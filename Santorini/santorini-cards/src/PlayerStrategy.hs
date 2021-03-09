@@ -42,7 +42,7 @@ winrule t@(n, gb@GB{})
   | otherwise = t
 
 stayclose :: Rule
-stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}]}) 
+stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}, _]}) 
   | dist p1 p2 == 4
     || dist p1 p2 == 2 = (n + closescore `div` 2, gb)
   | dist p1 p2 == 3    = (n + closescore, gb)
@@ -59,7 +59,7 @@ setupwin t@(n, gb)
   | otherwise   = t 
 
 dontfall :: Rule
-dontfall (n, gb@GB{players=[Player{tokens=[p1, p2]}],spaces}) 
+dontfall (n, gb@GB{players=[Player{tokens=[p1, p2]}, _],spaces}) 
   = (n + heightmultiplier * (getPos p1 spaces + getPos p2 spaces), gb)
 
 keepoplow :: Rule

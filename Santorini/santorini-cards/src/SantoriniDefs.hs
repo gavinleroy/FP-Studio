@@ -12,6 +12,8 @@ module SantoriniDefs where
 
 import           Data.Aeson
 import           Data.DList                                (DList)
+import           Data.Maybe                                (fromMaybe)
+import           Data.Foldable                             (find)
 import           Data.HashMap.Internal                     (keys)
 import           Data.Matrix                               (Matrix)
 import           Relude.Extra.Tuple                        (fmapToSnd)
@@ -128,6 +130,6 @@ nextS ST{kont = (Action f) : ks, ..}
 
  -- MUST HAVE AT LEAST ONE ELEMENT
  
-exitS :: State a -> a
-exitS ST {states} = DList.head states
+exitS :: (a -> Bool) -> State a -> a
+exitS f ST {states} = fromMaybe (error "invalid") $ find f states
 

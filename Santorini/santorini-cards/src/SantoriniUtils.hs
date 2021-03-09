@@ -11,7 +11,7 @@ module SantoriniUtils where
 
 import           Data.Char                       (intToDigit)
 import           Data.Matrix                     (Matrix)
-import           Data.List                       ((\\))
+import           Data.List                       ((\\), intersect)
 import qualified Data.Matrix as Matrix
 
 import SantoriniDefs
@@ -126,6 +126,11 @@ mNeighbors gb@GB{spaces}
   where 
     [p1, p2] = myplayer gb
     op       = opplayer gb
+
+occupiedNeighborsP1 :: GameBoard -> [Pos]
+occupiedNeighborsP1 gb@GB{spaces}
+  = mNeighbors' spaces p1 p2 `intersect` opplayer gb
+  where (p1:p2) = myplayer gb
 
 -- Using Neighbor Helpers with BState --
 -- mNeighborsXXX :: GameBoard -> [Pos]
