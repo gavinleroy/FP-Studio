@@ -36,14 +36,14 @@ lookupCM
 cardmap :: Map.Map String [PAction]
 cardmap
   = Map.fromList 
-  [ ("Apollo"     , [apollomove   , basicbuild]     )
-  , ("Artemis"    , [artemismove  , basicbuild]     )
-  , ("Atlas"      , [basicmove    , atlasbuild]     )
-  , ("Demeter"    , [basicmove    , demeterbuild]   )
-  , ("Hephastus"  , [basicmove    , hephastusbuild] )
-  , ("Minotaur"   , [minotaurmove , basicbuild]     )
-  , ("Pan"        , [basicmove    , basicbuild]     )
-  , ("Prometheus" , [basicmove    , basicbuild]     ) ]
+  [ ("Apollo"     , [apollomove, basicbuild]    )
+  , ("Artemis"    , undefined )
+  , ("Atlas"      , [basicmove, atlasbuild]     )
+  , ("Demeter"    , undefined )
+  , ("Hephastus"  , [basicmove, hephastusbuild] )
+  , ("Minotaur"   , undefined )
+  , ("Pan"        , undefined )
+  , ("Prometheus" , undefined ) ]
 
 -- BUILDING --
 
@@ -60,7 +60,8 @@ basicbuild = Action $ \gb ->
 atlasbuild :: PAction
 atlasbuild = Action $ \sgb ->
   let sgb' = basicbuild' sgb
-      expandSpaces = \gb' -> (newSpaces, map (capPos $ spaces gb') (bNeighbors gb'))
+      expandSpaces = \gb' -> 
+        (newSpaces, map (capPos $ spaces gb') (bNeighbors gb'))
   in exitIfS isWin $ fuseS sgb' $ expandS expandSpaces sgb
 
 demeterbuild :: PAction
@@ -68,8 +69,13 @@ demeterbuild = Action $ \gb ->
   undefined
 
 hephastusbuild :: PAction
-hephastusbuild = Action $ \gb ->
-  undefined
+hephastusbuild = Action $ \sgb ->
+  let sgb' = basicbuild' sgb
+      expandSpaces = \gb' -> 
+        (newSpaces
+        , map (incNPos 2 $ spaces gb') 
+          (filter (\p -> getPos p (spaces gb') < 2) $ bNeighbors gb'))
+  in exitIfS isWin $ fuseS sgb' $ expandS expandSpaces sgb
 
 prometheusbuild :: PAction
 prometheusbuild = Action $ \gb ->

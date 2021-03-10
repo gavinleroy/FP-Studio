@@ -87,8 +87,11 @@ getPos = uncurry Matrix.unsafeGet
 setPos :: a -> Pos -> Matrix a -> Matrix a
 setPos = Matrix.unsafeSet
 
+incNPos :: Num a => a -> Matrix a -> Pos -> Matrix a
+incNPos n m p = setPos ((+n) $ getPos p m) p m 
+
 incPos :: Num a => Matrix a -> Pos -> Matrix a
-incPos m p = setPos ((+1) $ getPos p m) p m 
+incPos = incNPos 1
 
 capPos :: Num a => Matrix a -> Pos -> Matrix a
 capPos m p = setPos 4 p m 
