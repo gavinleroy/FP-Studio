@@ -90,6 +90,9 @@ setPos = Matrix.unsafeSet
 incPos :: Num a => Matrix a -> Pos -> Matrix a
 incPos m p = setPos ((+1) $ getPos p m) p m 
 
+capPos :: Num a => Matrix a -> Pos -> Matrix a
+capPos m p = setPos 4 p m 
+
 -- Neighbor Helpers --
 
 neighbors :: Pos -> [Pos]

@@ -55,11 +55,13 @@ basicbuild' = expandS expandSpaces
 
 basicbuild :: PAction
 basicbuild = Action $ \gb -> 
-  nextS $ basicbuild' gb
+  exitIfS isWin $ basicbuild' gb
 
 atlasbuild :: PAction
-atlasbuild = Action $ \gb ->
-  undefined
+atlasbuild = Action $ \sgb ->
+  let sgb' = basicbuild' sgb
+      expandSpaces = \gb' -> (newSpaces, map (capPos $ spaces gb') (bNeighbors gb'))
+  in exitIfS isWin $ fuseS sgb' $ expandS expandSpaces sgb
 
 demeterbuild :: PAction
 demeterbuild = Action $ \gb ->
