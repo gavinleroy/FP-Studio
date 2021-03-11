@@ -182,8 +182,8 @@ mycard = card . head . players
 
 -- Strategy Utilities --
 
-isWin :: GameBoard -> Bool
-isWin gb@GB{spaces}
+isWin :: GameBoard -> GameBoard -> Bool
+isWin _ gb@GB{spaces}
   = getPos p1 spaces  == 3 
   || getPos p2 spaces == 3
   || null ((++)

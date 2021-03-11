@@ -20,6 +20,8 @@ import           Relude.Extra.Tuple                        (fmapToSnd)
 import qualified Data.DList  as DList 
 import qualified Data.Matrix as Matrix
 
+import Prelude hiding (init)
+
 -- Data Definitions --
 
 type Height    = Int
@@ -71,6 +73,7 @@ newtype Action a = Action (State a -> a)
 
 data State a = ST
   { kont   :: [Action a]
+  , init   :: a
   , states :: DList a 
   , term   :: DList a -> a }
 
@@ -81,6 +84,7 @@ instance Foldable State where
 state :: [Action a] -> (DList a -> a)  -> a -> State a
 state ks f a = ST 
   { kont   = ks
+  , init   = a
   , states = DList.singleton a
   , term   = f }
 
@@ -92,25 +96,21 @@ minBy f a1 a2
   | f a1 < f a2 = a1
   | otherwise   = a2
 
-applyS :: [b -> (b -> a -> b, [a])] -> State b -> State b
+applyS :: Eq b => [b -> (b -> a -> b, [a])] -> State b -> State b
 applyS fs sb = foldr1 fuseS . map (`expandS` sb) $ fs
 
 -- The shorter cont stack is chosen in case of fast return
 -- The first termination function is chosen for simplicity
-fuseS :: State a -> State a -> State a
-fuseS ST{kont=ks1,states=as,term} 
-      ST{kont=ks2,states=bs} 
-  | length ks1 /= length ks2 
-    = error "you fused continuations of a different size"
+fuseS :: Eq a => State a -> State a -> State a
+fuseS ST{kont=ks1,init=i1,states=as,term} 
+      ST{kont=ks2,init=i2,states=bs} 
+  | i1 /= i2 = error "cannot fuse two states with different initial states"
   | otherwise = ST 
-    { kont= ks1 
+    { kont   = ks
+    , init   = i1
     , states = as `DList.append` bs
     , term }
- -- TODO put this code back in :)
- -- = ST { kont=ks
- --      , states = as `DList.append` bs
- --      , term }
- --  where ks = minBy length ks1 ks2
+  where ks = minBy length ks1 ks2
 
 mapS :: (a -> a) -> State a -> State a
 mapS f ST{states=ls, ..} 
@@ -137,10 +137,13 @@ nextS ST{kont = (Action f) : ks, ..}
 
  -- MUST HAVE AT LEAST ONE ELEMENT
 
-exitIfS :: (a -> Bool) -> State a -> a
-exitIfS f sa
+-- TODO refactor to use a function of type (State a -> Bool)
+
+exitIfS :: (a -> a -> Bool) -> State a -> a
+exitIfS g sa
   | any f sa = exitS f sa
   | otherwise = nextS sa
+  where f = g $ init sa
  
 exitS :: (a -> Bool) -> State a -> a
 exitS f ST {states} = fromMaybe (error "invalid") $ find f states

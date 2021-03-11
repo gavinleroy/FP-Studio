@@ -39,19 +39,18 @@ cardmap
   [ ("Apollo"     , [apollomove, basicbuild]    )
   , ("Artemis"    , undefined )
   , ("Atlas"      , [basicmove, atlasbuild]     )
-  , ("Demeter"    , undefined )
+  , ("Demeter"    , [basicmove, demeterbuild]   )
   , ("Hephastus"  , [basicmove, hephastusbuild] )
   , ("Minotaur"   , undefined )
   , ("Pan"        , undefined )
-  , ("Prometheus" , undefined ) ]
+  -- TODO ERROR prometheus doesn't work :(
+  , ("Prometheus" , [prometheusbuild, prometheusmove, basicbuild] ) ]
 
 -- BUILDING --
 
 basicbuild' :: State GameBoard -> State GameBoard
-basicbuild' = expandS expandSpaces
-  where
-    expandSpaces gb' =
-      (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
+basicbuild' = expandS $ \gb' ->
+  (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
 
 basicbuild :: PAction
 basicbuild = Action $ \gb -> 
@@ -65,26 +64,39 @@ atlasbuild = Action $ \sgb ->
   in exitIfS isWin $ fuseS sgb' $ expandS expandSpaces sgb
 
 demeterbuild :: PAction
-demeterbuild = Action $ \gb ->
-  undefined
+demeterbuild = Action $ \sgb ->
+  let expandSpaces = \gb' ->
+        let bs = bNeighbors gb' 
+            m = spaces gb' in
+            ( newSpaces
+            , concatMap (\p -> 
+                let m' = incPos m p in
+                m' : map (incPos m') (filter (/=p) bs))
+              bs )
+  in exitIfS isWin $ expandS expandSpaces sgb
 
 hephastusbuild :: PAction
 hephastusbuild = Action $ \sgb ->
   let sgb' = basicbuild' sgb
       expandSpaces = \gb' -> 
-        (newSpaces
+        ( newSpaces
         , map (incNPos 2 $ spaces gb') 
-          (filter (\p -> getPos p (spaces gb') < 2) $ bNeighbors gb'))
+            (filter (\p -> getPos p (spaces gb') < 2) $ bNeighbors gb')
+          ++
+          map (incPos $ spaces gb') (bNeighbors gb'))
   in exitIfS isWin $ fuseS sgb' $ expandS expandSpaces sgb
 
 prometheusbuild :: PAction
-prometheusbuild = Action $ \gb ->
-  undefined
+prometheusbuild = Action $ \sgb ->
+  let sgb' = mapS swapPlayers sgb
+      sgb'' =  basicbuild' sgb
+      sgb''' = basicbuild' sgb' in
+  exitIfS isWin $ foldl1 fuseS [sgb, sgb', sgb'', sgb''']
 
 -- MOVING --
 
-basicmove' :: State GameBoard -> State GameBoard
-basicmove' = applyS [p1f, p2f]
+basicmove' :: (Pos -> Bool) -> State GameBoard -> State GameBoard
+basicmove' valid = applyS [p1f, p2f]
   where
     p1f = (,) newMyPlayerPos . getplayerpos
     p2f = p1f . swapMyPlayerPos
@@ -93,11 +105,11 @@ basicmove' = applyS [p1f, p2f]
       (\x_ -> 
         (\x y -> 
           [x, y]) x_ ((!! 1) $ myplayer gb')) 
-      (mNeighborsP1 gb') -- [Pos]
+      (filter valid $ mNeighborsP1 gb')
 
 basicmove :: PAction
 basicmove = Action $ \sgb -> 
-  exitIfS isWin $ basicmove' sgb
+  exitIfS isWin $ basicmove' (const True) sgb
 
 apolloswap :: GameBoard -> Pos -> GameBoard
 apolloswap GB
@@ -115,10 +127,9 @@ apolloswap GB
 
 apollomove :: PAction
 apollomove = Action $ \sgb ->
-  let sgb' = basicmove' sgb
+  let sgb' = basicmove' (const True) sgb
       swapOpPos = \gb' -> (apolloswap, occupiedNeighborsP1 gb') 
-      sgb'' = fuseS sgb' $ expandS swapOpPos sgb
-  in exitIfS isWin sgb''
+  in exitIfS isWin $ fuseS sgb' $ expandS swapOpPos sgb
 
 artemismove :: PAction
 artemismove = Action $ \gb ->
@@ -128,9 +139,24 @@ minotaurmove :: PAction
 minotaurmove = Action $ \gb ->
   undefined
 
+-- assume only the player in first position can move --
 prometheusmove :: PAction
-prometheusmove = Action $ \gb ->
-  undefined
+prometheusmove = Action $ \sgb@ST{init=gb} ->
+  let om = spaces gb
+      p1f = (,) newMyPlayerPos . getplayerpos
+      getplayerpos = \gb'-> 
+        let m = spaces gb'
+        in map (\x_ -> 
+             (\x y -> 
+               [x, y]) x_ ((!! 1) $ myplayer gb')) 
+           (filter 
+             (if om == m 
+              then const True
+              else (\p -> 
+                getPos p m <=
+                getPos (head $ myplayer gb') m))
+           $ mNeighborsP1 gb')
+  in exitIfS isWin $ expandS p1f sgb
 
 -- ADD PLAYER INTERFACE --
 

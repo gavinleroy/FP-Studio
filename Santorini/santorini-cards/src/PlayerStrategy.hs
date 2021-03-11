@@ -29,17 +29,11 @@ heightmultiplier  = 3
 
 rules :: Rule
 rules 
-  = winrule
-  . setupwin
+  = setupwin
   . dontlose
   . stayclose
   . dontfall
   -- . keepoplow -- I lose more with this enabled
-
-winrule :: Rule
-winrule t@(n, gb@GB{})
-  | isWin gb  = (n + winscore, gb)
-  | otherwise = t
 
 stayclose :: Rule
 stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}, _]}) 
