@@ -88,7 +88,7 @@ hephastusbuild = Action $ \sgb ->
 
 prometheusbuild :: PAction
 prometheusbuild = Action $ \sgb ->
-  let sgb' = mapS swapPlayers sgb
+  let sgb' = mapS swapMyPlayerPos sgb
       sgb'' =  basicbuild' sgb
       sgb''' = basicbuild' sgb' in
   exitIfS isWin $ foldl1 fuseS [sgb, sgb', sgb'', sgb''']
