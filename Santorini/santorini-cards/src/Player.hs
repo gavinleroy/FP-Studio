@@ -41,9 +41,8 @@ cardmap
   , ("Atlas"      , [basicmove, atlasbuild]     )
   , ("Demeter"    , [basicmove, demeterbuild]   )
   , ("Hephastus"  , [basicmove, hephastusbuild] )
-  , ("Minotaur"   , undefined )
-  , ("Pan"        , undefined )
-  -- TODO ERROR prometheus doesn't work :(
+  , ("Minotaur"   , [minotaurmove, basicbuild]  )
+  , ("Pan"        , [basicmove, basicbuild]     )
   , ("Prometheus" , [prometheusbuild, prometheusmove, basicbuild] ) ]
 
 -- BUILDING --
@@ -152,9 +151,23 @@ artemismove = Action $ \sgb@ST{init=igb} ->
       sgb'' = p1basicmove' (not . flip elem originalpos) sgb'
   in exitIfS isWin $ fuseS sgb' sgb''
 
+-- (Pos, Pos) is the position where I should go to,
+-- and the second is where the other player should get
+-- pushed to. If the two are equal then minotaur is 
+-- just moving and not doing any pushing.
+-- minotaurpush :: GameBoard -> (Pos, Pos) -> GameBoard
+minotaurpush :: GameBoard -> Pos -> GameBoard
+minotaurpush = undefined
+
 minotaurmove :: PAction
-minotaurmove = Action $ \gb ->
-  undefined
+minotaurmove = Action $ \sgb ->
+  -- Also we can move to an oponents square (similar to apollo)
+  let sgb' = basicmove' (const True) sgb
+      -- TODO change this to return a list of Position tuples
+      -- following what the minotaur push needs to do
+      swapOpPos = \gb' -> (minotaurpush, occupiedNeighborsP1 gb') 
+  in exitIfS isWin $ fuseS sgb' $ expandS swapOpPos sgb
+  -- except the opponent is pushed rather than swapped
 
 -- assume only the player in first position can move --
 prometheusmove :: PAction
