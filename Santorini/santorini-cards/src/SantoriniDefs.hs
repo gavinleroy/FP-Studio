@@ -88,9 +88,6 @@ state ks f a = ST
   , states = DList.singleton a
   , term   = f }
 
-getstateS :: State a -> DList a
-getstateS = states
-
 minBy :: Ord b => (a -> b) -> a -> a -> a
 minBy f a1 a2
   | f a1 < f a2 = a1
@@ -104,13 +101,15 @@ applyS fs sb = foldr1 fuseS . map (`expandS` sb) $ fs
 fuseS :: Eq a => State a -> State a -> State a
 fuseS ST{kont=ks1,init=i1,states=as,term} 
       ST{kont=ks2,init=i2,states=bs} 
-  | i1 /= i2 = error "cannot fuse two states with different initial states"
+  | i1 /= i2 
+    = error "cannot fuse two states with different initial states"
+  | length ks1 /= length ks2 
+    = error "cannot fuse two states with different continuation sizes"
   | otherwise = ST 
-    { kont   = ks
-    , init   = i1
-    , states = as `DList.append` bs
+    { kont    = ks1
+    , init    = i1
+    , states  = as `DList.append` bs
     , term }
-  where ks = minBy length ks1 ks2
 
 mapS :: (a -> a) -> State a -> State a
 mapS f ST{states=ls, ..} 
@@ -137,8 +136,6 @@ nextS ST{kont = (Action f) : ks, ..}
 
  -- MUST HAVE AT LEAST ONE ELEMENT
 
--- TODO refactor to use a function of type (State a -> Bool)
-
 exitIfS :: (a -> a -> Bool) -> State a -> a
 exitIfS g sa
   | any f sa = exitS f sa
@@ -146,5 +143,7 @@ exitIfS g sa
   where f = g $ init sa
  
 exitS :: (a -> Bool) -> State a -> a
-exitS f ST {states} = fromMaybe (error "invalid") $ find f states
+exitS f ST {states} 
+  = fromMaybe (error "invalid exit on a false state") 
+  $ find f states
 

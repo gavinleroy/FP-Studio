@@ -37,7 +37,7 @@ cardmap :: Map.Map String [PAction]
 cardmap
   = Map.fromList 
   [ ("Apollo"     , [apollomove, basicbuild]    )
-  , ("Artemis"    , undefined )
+  , ("Artemis"    , [artemismove, basicbuild]   )
   , ("Atlas"      , [basicmove, atlasbuild]     )
   , ("Demeter"    , [basicmove, demeterbuild]   )
   , ("Hephastus"  , [basicmove, hephastusbuild] )
@@ -95,17 +95,31 @@ prometheusbuild = Action $ \sgb ->
 
 -- MOVING --
 
+getplayerpos :: (Pos -> Bool) -> GameBoard -> [[Pos]]
+getplayerpos valid gb' = map 
+  (\x_ -> 
+    (\x y -> 
+      [x, y]) x_ ((!! 1) $ myplayer gb')) 
+  (filter valid $ mNeighborsP1 gb')
+
+p1basicmove' :: (Pos -> Bool) -> State GameBoard -> State GameBoard
+p1basicmove' valid 
+  = expandS 
+  $ (,) newMyPlayerPos 
+  . getplayerpos valid
+
+p2basicmove' :: (Pos -> Bool) -> State GameBoard -> State GameBoard
+p2basicmove' valid 
+  = expandS 
+  $ (,) newMyPlayerPos 
+  . getplayerpos valid
+  . swapMyPlayerPos
+
 basicmove' :: (Pos -> Bool) -> State GameBoard -> State GameBoard
-basicmove' valid = applyS [p1f, p2f]
-  where
-    p1f = (,) newMyPlayerPos . getplayerpos
-    p2f = p1f . swapMyPlayerPos
-    getplayerpos :: GameBoard -> [[Pos]]
-    getplayerpos gb' = map 
-      (\x_ -> 
-        (\x y -> 
-          [x, y]) x_ ((!! 1) $ myplayer gb')) 
-      (filter valid $ mNeighborsP1 gb')
+basicmove' valid sgb 
+  = fuseS 
+    (p1basicmove' valid sgb) 
+    (p2basicmove' valid sgb)
 
 basicmove :: PAction
 basicmove = Action $ \sgb -> 
@@ -132,8 +146,11 @@ apollomove = Action $ \sgb ->
   in exitIfS isWin $ fuseS sgb' $ expandS swapOpPos sgb
 
 artemismove :: PAction
-artemismove = Action $ \gb ->
-  undefined
+artemismove = Action $ \sgb@ST{init=igb} ->
+  let originalpos = myplayer igb
+      sgb' = basicmove' (const True) sgb
+      sgb'' = p1basicmove' (not . flip elem originalpos) sgb'
+  in exitIfS isWin $ fuseS sgb' sgb''
 
 minotaurmove :: PAction
 minotaurmove = Action $ \gb ->
@@ -150,7 +167,7 @@ prometheusmove = Action $ \sgb@ST{init=gb} ->
              (\x y -> 
                [x, y]) x_ ((!! 1) $ myplayer gb')) 
            (filter 
-             (if om == m 
+             (if om == spaces gb' 
               then const True
               else (\p -> 
                 getPos p m <=

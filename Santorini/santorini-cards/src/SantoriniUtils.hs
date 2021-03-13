@@ -16,52 +16,6 @@ import qualified Data.Matrix as Matrix
 
 import SantoriniDefs
 
--- testgb1 :: GameBoard
--- testgb1 = 
---   ( [[(1, 1), (3, 2)]]
---   , Matrix.fromLists 
---     $ replicate 5 
---     $ replicate 5 0
---   , 1 )
-
--- testgb2 :: GameBoard
--- testgb2 = 
---   ( [[(2, 3), (4, 4)], [(2, 5), (3, 5)]]
---   , Matrix.fromLists
---     [ [0, 0, 0, 0, 2]
---     , [1, 1, 2, 0, 0]
---     , [1, 0, 0, 3, 0]
---     , [0, 0, 3, 0, 0]
---     , [0, 0, 0, 1, 4] ]
---   , 18 )
-
--- testgb3 :: GameBoard
--- testgb3 = 
---   ( [[(1, 1), (1, 2)], [(1, 3), (1, 4)]]
---   , Matrix.fromLists 
---     $ replicate 5 
---     $ replicate 5 0
---   , 0 )
-
--- testgb4 :: GameBoard
--- testgb4 = 
---   ( [[(1, 1), (1, 2)], [(2, 1), (2, 2)]]
---   , Matrix.fromLists
---     [ [0, 0, 4, 0, 2]
---     , [1, 1, 4, 0, 0]
---     , [4, 4, 4, 3, 0]
---     , [0, 0, 3, 0, 0]
---     , [0, 0, 0, 1, 4] ]
---   , 18 )
-
-testmatr :: Matrix Int
-testmatr = Matrix.fromLists
-  [ [0, 3, 0, 3, 2]
-  , [2, 0, 0, 0, 0]
-  , [0, 0, 0, 0, 0]
-  , [0, 0, 0, 0, 0]
-  , [0, 0, 0, 0, 0] ]
-
 -- Utilities --
 
 chunksOf :: Int -> [a] -> [[a]]
@@ -98,52 +52,60 @@ capPos m p = setPos 4 p m
 
 -- Neighbor Helpers --
 
-neighbors :: Pos -> [Pos]
-neighbors (x, y)
+neighbors :: Int -> Pos -> [Pos]
+neighbors d (x, y)
   = [(x + x', y + y') 
-  | x' <- [-1..1]
-  , y' <- [-1..1]
+  | x' <- [-d..d]
+  , y' <- [-d..d]
   , (x' /= 0 || y' /= 0) 
   && inbounds (x + x', y + y')]
 
-bNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
-bNeighbors' m p op
+bNeighbors' :: Int -> Matrix Int -> Pos -> [Pos] -> [Pos]
+bNeighbors' d m p op
   = flip (\\) op
   $ filter ((< 4) 
     . flip getPos m) 
-  . neighbors $ p
+  . neighbors d $ p
 
 bNeighbors :: GameBoard -> [Pos]
 bNeighbors gb@GB{spaces}
-  = bNeighbors' spaces p1 (p2:op)
+  = bNeighbors' 1 spaces p1 (p2:op)
   where
     [p1, p2] = myplayer gb
     op       = opplayer gb
 
-mNeighbors' :: Matrix Int -> Pos -> [Pos] -> [Pos]
-mNeighbors' m p
+mNeighbors' :: Int -> Matrix Int -> Pos -> [Pos] -> [Pos]
+mNeighbors' d m p
   = filter ((< getPos p m + 2) 
     . flip getPos m ) 
-  . bNeighbors' m p
+  . bNeighbors' d m p
 
-mNeighbors :: GameBoard -> [Pos]
-mNeighbors gb@GB{spaces}
-  = mNeighbors' spaces p1 (p2:op)
+mNeighborsN :: Int -> GameBoard -> [Pos]
+mNeighborsN d gb@GB{spaces}
+  = mNeighbors' d spaces p1 (p2:op)
   where 
     [p1, p2] = myplayer gb
     op       = opplayer gb
 
+mNeighbors :: GameBoard -> [Pos]
+mNeighbors = mNeighborsN 1
+
 occupiedNeighborsP1 :: GameBoard -> [Pos]
 occupiedNeighborsP1 gb@GB{spaces}
-  = mNeighbors' spaces p1 p2 `intersect` opplayer gb
+  = mNeighbors' 1 spaces p1 p2 `intersect` opplayer gb
   where (p1:p2) = myplayer gb
 
 -- Using Neighbor Helpers with BState --
 -- mNeighborsXXX :: GameBoard -> [Pos]
-mNeighborsP1  = mNeighbors
+mNeighborsP1  = mNeighbors 
 mNeighborsP2  = mNeighbors . swapMyPlayerPos
 mNeighborsOP1 = mNeighbors . swapPlayers
 mNeighborsOP2 = mNeighbors . swapMyPlayerPos . swapPlayers
+-- Optional helpers for a move distance of d
+mNeighborsP1N    = mNeighborsN
+mNeighborsP2N  d = mNeighborsN d . swapMyPlayerPos
+mNeighborsOP1N d = mNeighborsN d . swapPlayers
+mNeighborsOP2N d = mNeighborsN d . swapMyPlayerPos . swapPlayers
 
 -- GameBoard Utilities --
 
