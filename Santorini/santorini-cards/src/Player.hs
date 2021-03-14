@@ -8,10 +8,11 @@
  - -}
 
 module Player 
-  ( module SantoriniDefs 
-  , initplayer
-  , playerturn
-  ) where
+  -- ( module SantoriniDefs 
+  -- , initplayer
+  -- , playerturn
+  -- ) where
+  where
 
 import           Control.Monad                  (join)
 import           Data.DList                     (DList)
@@ -36,13 +37,13 @@ lookupCM
 cardmap :: Map.Map String [PAction]
 cardmap
   = Map.fromList 
-  [ ("Apollo"     , [apollomove, basicbuild]    )
-  , ("Artemis"    , [artemismove, basicbuild]   )
-  , ("Atlas"      , [basicmove, atlasbuild]     )
-  , ("Demeter"    , [basicmove, demeterbuild]   )
-  , ("Hephastus"  , [basicmove, hephastusbuild] )
-  , ("Minotaur"   , [minotaurmove, basicbuild]  )
-  , ("Pan"        , [basicmove, basicbuild]     )
+  [ ("Apollo"     , [apollomove     , basicbuild]                 )
+  , ("Artemis"    , [artemismove    , basicbuild]                 )
+  , ("Atlas"      , [basicmove      , atlasbuild]                 )
+  , ("Demeter"    , [basicmove      , demeterbuild]               )
+  , ("Hephastus"  , [basicmove      , hephastusbuild]             )
+  , ("Minotaur"   , [minotaurmove   , basicbuild]                 )
+  , ("Pan"        , [basicmove      , basicbuild]                 )
   , ("Prometheus" , [prometheusbuild, prometheusmove, basicbuild] ) ]
 
 -- BUILDING --
@@ -52,8 +53,8 @@ basicbuild' = expandS $ \gb' ->
   (newSpaces, map (incPos $ spaces gb') (bNeighbors gb'))
 
 basicbuild :: PAction
-basicbuild = Action $ \gb -> 
-  exitIfS isWin $ basicbuild' gb
+basicbuild = Action $ \sgb -> 
+  exitIfS isWin $ basicbuild' sgb
 
 atlasbuild :: PAction
 atlasbuild = Action $ \sgb ->
@@ -235,6 +236,13 @@ initplayer :: Players -> Players
 initplayer = addPlayer
 
 -- TEST GB --
+
+testpan = GB 
+  { players =
+    [ Player{ card = "Pan",tokens = [(2,3),(4,5)] }
+    , Player{ card = "Apollo",tokens = [(2,1),(4,2)] } ]
+  , spaces = Matrix.fromLists [[0,0,0,0,0],[1,0,0,0,0],[0,1,0,1,1],[2,2,0,0,2],[1,0,0,2,1]]
+  , turn = 14}
 
 testgb = GB
     { players = 

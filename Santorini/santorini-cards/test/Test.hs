@@ -2,6 +2,7 @@
 import Test.HUnit
 import Decode       (decodeTestList)
 import Encode       (encodeTestList)
+import MoveT        (moveTestList)
 
 main :: IO ()
 main = do
@@ -10,5 +11,8 @@ main = do
   putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~>"
   putStrLn "~~~~~~~~~~~~ Running Encode Tests ~~~~~~~~~~~~>"
   runTestTT encodeTestList
+  putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~>"
+  putStrLn "~~~~~~~~~~~~~ Running Move Tests ~~~~~~~~~~~~~>"
+  runTestTT moveTestList
   putStrLn "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~>"
   return ()

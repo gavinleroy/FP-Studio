@@ -11,6 +11,7 @@
 module SantoriniDefs where
 
 import           Data.Aeson
+import           Data.Char                                 (intToDigit)
 import           Data.DList                                (DList)
 import           Data.Maybe                                (fromMaybe)
 import           Data.Foldable                             (find)
@@ -53,7 +54,23 @@ data GameBoard = GB
   { players :: [Player]
   , spaces  :: Matrix Height
   , turn    :: Turn 
-  } deriving (Eq, Show)
+  } deriving (Eq)
+
+instance Show GameBoard where
+  show GB
+    { players=[Player{card=c1, tokens=t1@[p1, p2]}
+      , Player{card=c2,tokens=t2@[p1', p2']}]
+    , spaces }
+    =  c1 ++ " ^ " ++ show t1 ++ "\n"
+    ++ c2 ++ " * " ++ show t2 ++ "\n"
+    ++ show 
+    ( Matrix.setElem '*' p2'
+    $ Matrix.setElem '*' p1'
+    $ Matrix.setElem '^' p2
+    $ Matrix.setElem '^' p1
+    $ Matrix.fromLists 
+    $ map (map intToDigit)
+    $ Matrix.toLists spaces)
 
 instance ToJSON GameBoard where
   toJSON GB{players, spaces=sps, turn} = object

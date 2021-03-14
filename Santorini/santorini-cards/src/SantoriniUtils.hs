@@ -149,8 +149,9 @@ isWin
   ib@GB -- initial board
   { players = 
     [ Player
-      { tokens = ps@[p1, p2] }, _ ]
+      { card = oc, tokens = ps@[p1, p2] }, _ ]
   , spaces }
+
   gb@GB -- new position
   { players = 
     [ Player
@@ -160,18 +161,17 @@ isWin
       { card = opcard
       , tokens = [op1, op2] } ]
   , spaces = spaces' }
-  =  (not againstminotaur && p1h' == 3)
-  || (not againstminotaur && p2h' == 3)
-  || (againstminotaur && p1h' == 3 && p1' `notElem` ps)
-  || (againstminotaur && p2h' == 3 && p2' `notElem` ps)
-  || (iampan && (p1h - p1h') >= 2)
-  || (iampan && (p2h - p2h') >= 2)
+  =  (p1h' == 3 && p1' `notElem` ps)
+  || (p2h' == 3 && p2' `notElem` ps)
+  || (iampan && p2 == p2' && p1h - p1h' >= 2)
+  || (iampan && p1 == p1' && p2h - p2h' >= 2)
+  || (iampan && p1 == p2' && p2h - p1h' >= 2)
+  || (iampan && p2 == p1' && p1h - p2h' >= 2)
   || null ((++)
       (take 1 (mNeighborsOP1 gb)) 
       (take 1 (mNeighborsOP2 gb)))
   where 
     iampan = mycard == "Pan"
-    againstminotaur = opcard == "Minotaur"
     p1h  = getPos p1 spaces
     p2h  = getPos p2 spaces
     p1h' = getPos p1' spaces'
@@ -205,19 +205,6 @@ padd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 psub :: Pos -> Pos -> Pos
 psub (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
--- IO GameBoard --
-
-gbshow :: GameBoard -> String
-gbshow GB
-  { players=[Player{tokens=[p1, p2]}
-    , Player{tokens=[p1', p2']}]
-  , spaces }
-  = show 
-  $ Matrix.setElem '#' p2'
-  $ Matrix.setElem '#' p1'
-  $ Matrix.setElem '#' p2
-  $ Matrix.setElem '#' p1
-  $ Matrix.fromLists 
-  $ map (map intToDigit)
-  $ Matrix.toLists spaces
+pabs :: Pos -> Pos
+pabs (x, y) = (abs x, abs y)
 

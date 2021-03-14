@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e8650daefe4e02bb592b7c274cf10db1b1887d1b84c37a18166e141c44e8062
+-- hash: 0dc421ceb34ce552dd84906ec0cfe13c08877cde1c1e27d3cfb38ae5c796b939
 
 name:           santorini
 version:        0.1.0.0
@@ -101,6 +101,7 @@ test-suite player-test
   other-modules:
       Decode
       Encode
+      MoveT
       Paths_santorini
   hs-source-dirs:
       test
