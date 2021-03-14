@@ -145,13 +145,37 @@ mycard = card . head . players
 -- Strategy Utilities --
 
 isWin :: GameBoard -> GameBoard -> Bool
-isWin _ gb@GB{spaces}
-  = getPos p1 spaces  == 3 
-  || getPos p2 spaces == 3
+isWin
+  ib@GB -- initial board
+  { players = 
+    [ Player
+      { tokens = ps@[p1, p2] }, _ ]
+  , spaces }
+  gb@GB -- new position
+  { players = 
+    [ Player
+      { card = mycard
+      , tokens = ps'@[p1', p2'] }
+    , Player
+      { card = opcard
+      , tokens = [op1, op2] } ]
+  , spaces = spaces' }
+  =  (not againstminotaur && p1h' == 3)
+  || (not againstminotaur && p2h' == 3)
+  || (againstminotaur && p1h' == 3 && p1' `notElem` ps)
+  || (againstminotaur && p2h' == 3 && p2' `notElem` ps)
+  || (iampan && (p1h - p1h') >= 2)
+  || (iampan && (p2h - p2h') >= 2)
   || null ((++)
       (take 1 (mNeighborsOP1 gb)) 
       (take 1 (mNeighborsOP2 gb)))
-  where [p1,p2] = myplayer gb
+  where 
+    iampan = mycard == "Pan"
+    againstminotaur = opcard == "Minotaur"
+    p1h  = getPos p1 spaces
+    p2h  = getPos p2 spaces
+    p1h' = getPos p1' spaces'
+    p2h' = getPos p2' spaces'
 
 couldWin :: GameBoard -> Bool
 couldWin GB{} -- bs@(p@[p1, p2],m,op@[op1, op2]) 
