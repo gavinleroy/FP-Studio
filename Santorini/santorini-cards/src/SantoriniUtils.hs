@@ -173,6 +173,14 @@ couldElevate GB{} -- (p@[p1,p2],m,op)
   --           . flip getPos m) 
   --         $ mNeighbors' m p (p':op)
 
+-- Position manipulations -- 
+
+padd :: Pos -> Pos -> Pos
+padd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+psub :: Pos -> Pos -> Pos
+psub (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+
 -- IO GameBoard --
 
 gbshow :: GameBoard -> String
