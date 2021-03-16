@@ -19,13 +19,14 @@ import SantoriniUtils
 
 type Rule = ((Int, GameBoard) -> (Int, GameBoard))
 
-winscore          =  100
+winscore          =  10
 losescore         = -50
+trickypushscore   =  9
 poswinscore       =  7
 closescore        =  4
 oplowscore        =  2
 
-heightmultiplier  = 3
+heightmultiplier  = 2
 
 rules :: Rule
 rules 
@@ -33,7 +34,21 @@ rules
   . dontlose
   . stayclose
   . dontfall
-  -- . keepoplow -- I lose more with this enabled
+  . minotaurpush
+
+-- Try to push people to level 3
+-- or Pan to level 0
+minotaurpush :: Rule
+minotaurpush t@(n, 
+  gb@GB{players=[Player{card}
+  , Player{tokens=[op1, op2]}]
+  , spaces})
+  | card /= "Minotaur"      = t
+  | any ((==3) . flip getPos spaces) 
+      (foldr (:) 
+        (mNeighborsOP1 gb) 
+        (mNeighborsOP2 gb)) = (n + trickypushscore, gb)
+  | otherwise               = t
 
 stayclose :: Rule
 stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}, _]}) 
@@ -44,8 +59,9 @@ stayclose t@(n, gb@GB{players=[Player{tokens=[p1, p2]}, _]})
 
 dontlose :: Rule
 dontlose t@(n, gb) 
-  | couldWin (swapPlayers gb) = (n + losescore, gb)
-  | otherwise                = t 
+  | couldWin (swapPlayers gb) 
+    || cantMove gb = (n + losescore, gb)
+  | otherwise      = t 
 
 setupwin :: Rule
 setupwin t@(n, gb) 
@@ -55,11 +71,6 @@ setupwin t@(n, gb)
 dontfall :: Rule
 dontfall (n, gb@GB{players=[Player{tokens=[p1, p2]}, _],spaces}) 
   = (n + heightmultiplier * (getPos p1 spaces + getPos p2 spaces), gb)
-
-keepoplow :: Rule
-keepoplow t@(n, gb)
-  | couldElevate (swapPlayers gb) = (n + oplowscore, gb)
-  | otherwise                    = t
 
 rankboard :: GameBoard -> (Int, GameBoard)
 rankboard = rules . (,) 0

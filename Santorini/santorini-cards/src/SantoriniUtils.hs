@@ -167,9 +167,11 @@ isWin
   || (iampan && p1 == p1' && p2h - p2h' >= 2)
   || (iampan && p1 == p2' && p2h - p1h' >= 2)
   || (iampan && p2 == p1' && p1h - p2h' >= 2)
-  || null ((++)
-      (take 1 (mNeighborsOP1 gb)) 
-      (take 1 (mNeighborsOP2 gb)))
+  
+  -- The ref program doesn't seem to honor these wins
+  -- || null ((++)
+  --     (take 1 (mNeighborsOP1 gb)) 
+  --     (take 1 (mNeighborsOP2 gb)))
   where 
     iampan = mycard == "Pan"
     p1h  = getPos p1 spaces
@@ -177,25 +179,46 @@ isWin
     p1h' = getPos p1' spaces'
     p2h' = getPos p2' spaces'
 
+cantMove :: GameBoard -> Bool
+cantMove gb = not $ null ((++)
+  (take 1 (mNeighborsP1 gb)) 
+  (take 1 (mNeighborsP2 gb)))
+
 couldWin :: GameBoard -> Bool
-couldWin GB{} -- bs@(p@[p1, p2],m,op@[op1, op2]) 
- = False
-  -- = any ((==3) . flip getPos m) 
-  --   (foldr (:) 
-  --     (mNeighborsP1 bs) 
-  --     (mNeighborsP2 bs))
-  -- || null ((++)
-  --     (take 1 (mNeighborsOP1 bs)) 
-  --     (take 1 (mNeighborsOP2 bs)))
+couldWin
+  gb@GB
+  { players = 
+    [ Player
+      { card = mycard
+      , tokens = ps@[p1, p2] }
+    , Player
+      { tokens = op@[op1, op2] } ]
+  , spaces }
+ = any ((==3) . flip getPos spaces) 
+    (foldr (:) 
+      (mNeighborsP1 gb) 
+      (mNeighborsP2 gb))
+  -- || (iampan 
+  --   && any ((>=2)) [1..10])
+  --   TODO check for neighboring 0 values
+  || null ((++)
+      (take 1 (mNeighborsOP1 gb)) 
+      (take 1 (mNeighborsOP2 gb)))
+  where iampan = "Pan" == mycard
 
 couldElevate :: GameBoard -> Bool
-couldElevate GB{} -- (p@[p1,p2],m,op)
-  = False
-  -- = not . null . (++) (f p1 p2) $ f p2 p1
-  -- where f p p' =
-  --         filter ((> getPos p m) 
-  --           . flip getPos m) 
-  --         $ mNeighbors' m p (p':op)
+couldElevate
+  gb@GB
+  { players = 
+    [ Player
+      { tokens = ps@[p1, p2] }
+    , Player
+      { tokens = op@[op1, op2] } ]
+  , spaces }
+  = not 
+  . null 
+  . (++) (mNeighborsP1 gb) 
+  $ mNeighborsP2 gb
 
 -- Position manipulations -- 
 

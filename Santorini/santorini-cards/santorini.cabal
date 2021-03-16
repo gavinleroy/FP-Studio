@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0dc421ceb34ce552dd84906ec0cfe13c08877cde1c1e27d3cfb38ae5c796b939
+-- hash: 1195fb07b526daca7c31e0592ed930365b73dbfc55338cfdc86c6fd14cb1d70f
 
 name:           santorini
 version:        0.1.0.0
@@ -45,8 +45,11 @@ library
     , containers
     , dlist
     , matrix
+    , process
+    , regex-posix
     , relude
     , text
+    , turtle
     , typed-process
     , unordered-containers <3
   default-language: Haskell2010
@@ -66,9 +69,12 @@ executable driver
     , containers
     , dlist
     , matrix
+    , process
+    , regex-posix
     , relude
     , santorini
     , text
+    , turtle
     , typed-process
     , unordered-containers <3
   default-language: Haskell2010
@@ -88,9 +94,37 @@ executable player
     , containers
     , dlist
     , matrix
+    , process
+    , regex-posix
     , relude
     , santorini
     , text
+    , turtle
+    , typed-process
+    , unordered-containers <3
+  default-language: Haskell2010
+
+executable runner
+  main-is: RunnerMain.hs
+  other-modules:
+      Paths_santorini
+  hs-source-dirs:
+      testrunner
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      HUnit
+    , aeson
+    , base >=4.7 && <5
+    , bytestring
+    , containers
+    , dlist
+    , matrix
+    , process
+    , regex-posix
+    , relude
+    , santorini
+    , text
+    , turtle
     , typed-process
     , unordered-containers <3
   default-language: Haskell2010
@@ -114,9 +148,12 @@ test-suite player-test
     , containers
     , dlist
     , matrix
+    , process
+    , regex-posix
     , relude
     , santorini
     , text
+    , turtle
     , typed-process
     , unordered-containers <3
   default-language: Haskell2010
