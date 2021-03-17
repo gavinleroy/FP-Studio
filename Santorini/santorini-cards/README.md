@@ -3,7 +3,11 @@
 ## Player
 
 `santorini-cards` extends the functionality of `santorini-base` to support playing 
- with the basic *god* cards.
+ with the [*simple god set*](http://files.roxley.com/Santorini-Rulebook-Web-2016.08.14.pdf).
+
+:warning: My player implements all necessary functionality for the below cards, however,
+the strategy for choosing the best possible move is extremely naïve and rarely results
+in a well-played game.
 
 ### God Power Descriptions
 
@@ -63,4 +67,31 @@ Other important libraries include:
 
 The executables are found in 
 `./.stack-work/install/x86_64-osx/202c490e26cd90901fb3c6e9985a679cadc0e3588f4baafa7a56b5c0320dbd69/8.10.3/bin`
+
+### Building Player for CADE Lab
+
+To build the player to work on the CADE lab machines this needs to be done statically 
+as all of the necessary `.so` files are not available (or are outdated versions). This
+can be achieved by changing the *player* configuration of the executable in `package.yaml` to 
+the following
+
+```
+...
+ghc-options: -Wall -O2 -static -threaded
+cc-options: -static
+ld-options: -static -pthread
+extra-lib-dirs: <insert paths to all necessary .a files
+...
+```
+
+## Test Runner
+
+The test runner is a simple program which will place two players in competition with each other
+with all combinations of available cards. The runner must be passed three command line arguments
+
+`runner <referee program> <player 1> <plaery 2>`
+
+The main goal of the runner is to make sure that neither player makes a bad move. This can be useful
+to quickly test the validity of your moves with all the available cards (against all available cards)
+if you place your executable in competition with a random agent.
 

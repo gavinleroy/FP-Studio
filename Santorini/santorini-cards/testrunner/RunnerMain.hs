@@ -45,8 +45,11 @@ runtests r p1 p2 ((a, b) : cs) = do
 
 main :: IO ()
 main = do
-  [r, p1, p2] <- getArgs
-  runtests r p1 p2 
-    [(x, y) | x <- cardlist, y <- cardlist, x /= y]
-  putStrLn "no bad moves :)"
+  al <- getArgs
+  case al of
+    [r, p1, p2] -> do
+      runtests r p1 p2 
+        [(x, y) | x <- cardlist, y <- cardlist, x /= y]
+      putStrLn "no bad moves :)"
+    _ -> putStrLn "ERROR ~\n\tUSAGE: runner <referee> <player 1> <player 2>"
 
