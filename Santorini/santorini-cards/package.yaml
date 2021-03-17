@@ -61,7 +61,7 @@ executables:
     - santorini
   runner:
     main:                RunnerMain.hs
-    source-dirs:         testrunner
+    source-dirs:         runnerapp
     ghc-options:
     - -threaded
     - -rtsopts

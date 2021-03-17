@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1195fb07b526daca7c31e0592ed930365b73dbfc55338cfdc86c6fd14cb1d70f
+-- hash: 4b3a7957c6bb36bef0cf2738a1f41eb00bfbb4a2b110ce221d5bf28d8377e943
 
 name:           santorini
 version:        0.1.0.0
@@ -109,7 +109,7 @@ executable runner
   other-modules:
       Paths_santorini
   hs-source-dirs:
-      testrunner
+      runnerapp
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       HUnit

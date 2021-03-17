@@ -89,7 +89,7 @@ extra-lib-dirs: <insert paths to all necessary .a files
 The test runner is a simple program which will place two players in competition with each other
 with all combinations of available cards. The runner must be passed three command line arguments
 
-`runner <referee program> <player 1> <plaery 2>`
+`runner <referee program> <player 1> <player 2>`
 
 The main goal of the runner is to make sure that neither player makes a bad move. This can be useful
 to quickly test the validity of your moves with all the available cards (against all available cards)
