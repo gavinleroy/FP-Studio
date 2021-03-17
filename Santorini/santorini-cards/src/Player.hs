@@ -8,11 +8,10 @@
  - -}
 
 module Player 
-  -- ( module SantoriniDefs 
-  -- , initplayer
-  -- , playerturn
-  -- ) where
-  where
+  ( module SantoriniDefs 
+  , initplayer
+  , playerturn
+  ) where
 
 import           Control.Monad                  (join)
 import           Data.DList                     (DList)
@@ -234,20 +233,4 @@ playerturn gb
 
 initplayer :: Players -> Players
 initplayer = addPlayer
-
--- TEST GB --
-
-testpan = GB 
-  { players =
-    [ Player{ card = "Pan",tokens = [(2,3),(4,5)] }
-    , Player{ card = "Apollo",tokens = [(2,1),(4,2)] } ]
-  , spaces = Matrix.fromLists [[0,0,0,0,0],[1,0,0,0,0],[0,1,0,1,1],[2,2,0,0,2],[1,0,0,2,1]]
-  , turn = 14}
-
-testgb = GB
-    { players = 
-      [ Player{ card = "Artemis", tokens = [(2, 3), (4, 4)] }
-      , Player{ card = "Prometheus", tokens = [(2, 5), (3, 5)] } ]
-    , spaces = Matrix.fromLists [[0,0,0,0,2],[1,1,2,0,0],[1,0,0,3,0],[0,0,3,0,0],[0,0,0,1,4]]
-    , turn = 18 }
 
