@@ -1,0 +1,4 @@
+(executable
+  (name oczip)
+  (libraries core)
+  (preprocess (pps ppx_jane)))

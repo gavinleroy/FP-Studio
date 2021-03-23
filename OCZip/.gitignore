@@ -1,12 +1,3 @@
-*.txt
-*.hi
-*.o
-*.zip
-*.tgz
-.stack-work/
-dist-newstyle/
-given-binaries/
-
 _build
 _opam
 .depend
