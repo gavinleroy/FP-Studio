@@ -1,7 +1,8 @@
 
-all:
-	@dune build oczip.ml
+ARGS=test.zip test.txt
 
-run:
-	@dune exec ./oczip.exe
+# all: dune build oczip.ml
+
+all:
+	@dune exec -- ./oczip.exe $(ARGS)
 
