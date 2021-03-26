@@ -20,7 +20,6 @@ import qualified Data.Matrix as Matrix
 import qualified Data.Map    as Map
 import qualified Player      as P
 
--- Player Cont Types -- -- TODO REMOVE
 doAct :: (ToJSON a, FromJSON a) => (a -> a) -> IO ()
 doAct f = readOBJ >>= printOBJ . f 
 
