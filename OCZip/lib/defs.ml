@@ -24,6 +24,7 @@ type local_file_header =
     file_name          : string;          (** file name as a string *)
     (* extra              : string;           (** extra information *) *)
     file_offset        : int;             (** file offset in the zip *)
+    data               : int option Stream.t;
   } (**  Contents describing the local file header *)
 
 type inp_archive = 

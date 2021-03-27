@@ -36,9 +36,9 @@ let getdosfmt_localtime unixtime =
 let getdosfmt_date unixtime =
   let t = Unix.localtime unixtime in
     (* tm_year = Year - 1900 NOTE we want year since 1980 not 1900*)
-    (((t.Unix.tm_year - 80) lsr 9) lor
+    (((t.Unix.tm_year - 80) lsl 9) lor
     (* 0 <= tm_mon < 12 *)
-    ((t.Unix.tm_mon + 1) lsr 5)) lor
+    ((t.Unix.tm_mon + 1) lsl 5)) lor
     (* tm_mday --> Month date *)
     t.Unix.tm_mday
 
