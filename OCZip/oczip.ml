@@ -5,49 +5,14 @@
 (****************************)
  
 open Core
+open Lib.Utils
+open Lib.Defs
 
-type nonrec compress_method = 
-  | Store   (** No compression *) 
-  | Deflate (** DEFLATE compression ~ https://tools.ietf.org/html/rfc1951#section-3 *)
-    (** Compression used for file data storage *)
-
-(* off | bytes | description ~ https://docs.fileformat.com/compression/zip/ 
- * 	0     4	Local file header signature # 0x04034b50 (read as a little-endian number)
- *  4	    2	Version needed to extract (minimum)
- *  6	    2	General purpose bit flag
- *  8	    2	Compression method
- *  10	  2	File last modification time
- *  12	  2	File last modification date
- *  14	  4	CRC-32
- *  18	  4	Compressed size
- *  22	  4	Uncompressed size
- *  26	  2	File name length (n)
- *  28	  2	Extra field length (m)
- *  30	  n	File Name
- *  30+n	m	Extra Field 
- *)
-
-type local_file_header =
-  { min_version: float; (** minimum version needed to read the file *)
-    flags: int32; (** flags *)
-    c_method: compress_method; (** method of compression *)
-    mtime: int; (** time of last modification *)
-    mdate: int; (** date of last modification *)
-    crc: int32; (** crc32 checksum *)
-    compressed_size: int; (** size of compressed file *)
-    uncompressed_size: int; (** size of uncompressed file *)
-    file_name_length: int32; (** length of the file name *)
-    extra_field_length: int32; (** extra field length *)
-    file_name: string; (** file name as a string *)
-    extra: string; (** extra information *)
-    file_offset: int64 (** file offset in the zip *)
-  } (**  Contents describing the local file header *)
-
-let local_file_header_signature = ()
+exception ImpE of string
 
 (* takes a file name and returns a 
  * stream of bytes option represented in decimal *)
-let fn_2_byte_stream fn = 
+let fn_to_byte_stream fn = 
   let inc = In_channel.create ~binary:true fn in
     Stream.from
       (fun _ ->
@@ -70,59 +35,67 @@ let put_bytes _ ints =
     List.iter ints ~f: (fun b -> Out_channel.output_char stdout (Char.unsafe_of_int b))
     (* close_out outc *)
 
+let open_file_with_stats fn = 
+  let fstats = Unix.stat fn in
+  let iarch = 
+    { filename = fn;
+      ichnl    = fn_to_byte_stream fn;
+      mtime    = getdosfmt_localtime fstats.st_mtime;
+      mdate    = getdosfmt_date fstats.st_mtime;
+      size     = fstats.st_size; } in 
+  iarch
+
+let fn_to_header fn =
+  let ifile = open_file_with_stats fn in
+  (* TODO we need to compress/encrypt the byte stream and get the new count  *)
+  { c_method           = Store;
+    mtime              = ifile.mtime;
+    mdate              = ifile.mdate;
+    crc                = 0; (* compute the crc?? TODO  *)
+    compressed_size    = ifile.size;
+    uncompressed_size  = ifile.size; (* this needs to get ocmputed by zlib TODO  *)
+    file_name          = ifile.filename;
+    file_offset        = 0; }
+
+let compress_input tgt infn = 
+  let fe = fn_to_header infn in
+    { tgt with files = fe :: tgt.files }
+
 let compress infn outfn =
-    put_bytes outfn (get_bytes infn)
+  let tgt = 
+    { filename = outfn;
+      ochnl    = Out_channel.create ~binary:true outfn;
+      files    = [];
+    } in
+    compress_input tgt infn
 
 (*********************)
 (* writing utilities *)
 (*********************)
 
-let write_1byte ochnl n = 
-  Out_channel.output_byte ochnl n
-
-let write_2byte_le ochnl n = 
-  (* output the lower byte *)
-  write_1byte ochnl n; 
-  (* output the upper byte *)
-  write_1byte ochnl (n lsr 8)
-
-let write_4byte_le ochnl n = 
-  (* write the lower 2 bytes *)
-  write_2byte_le ochnl n;
-  (* write the upper two bytes *)
-  write_2byte_le ochnl (n lsr 16)
-
-(* TODO *)
-let getdosfmt_of_localtime = ()
-
-let get_compress_method_code cmthd = 
-  match cmthd with
-    | Store -> 0
-    | Deflate -> 8
-
-(* the constant file signature for headers *)
-let file_signature = 0x04034b50
+(* the constant file signature for local headers *)
+let local_file_signature = 0x04034b50
 
 let write_directory_header = ()
 
 let write_local_file_header ochnl fh = 
-  write_4byte_le ochnl file_signature;
+  write_4byte_le ochnl local_file_signature;
   (* required version *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hardcoded *)
   (* bit flags *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
   (* compression method *)
   write_2byte_le ochnl (get_compress_method_code fh.c_method);
-  (* last modification time TODO *) (* NOTE these need to be in dos standard *)
-  write_4byte_le ochnl 0;
-  (* last modification date TODO *) (* NOTE these need to be in dos standard *)
-  write_4byte_le ochnl 0;
+  (* last modification time *)
+  write_4byte_le ochnl fh.mtime;
+  (* last modification date *)
+  write_4byte_le ochnl fh.mdate;
   (* CRC 32 TODO not sure how to get this*)
   write_4byte_le ochnl 0;
   (* compressed size *)
-  write_4byte_le ochnl fh.uncompressed_size;
+  write_4byte_le ochnl (int64_to_int fh.uncompressed_size);
   (* uncompressed size *)
-  write_4byte_le ochnl fh.compressed_size;
+  write_4byte_le ochnl (int64_to_int fh.compressed_size);
   (* file name size *)
   write_4byte_le ochnl (String.length fh.file_name);
   (* extra comment size *)
@@ -131,7 +104,70 @@ let write_local_file_header ochnl fh =
   Out_channel.output_string ochnl fh.file_name
   (* extra comment *)
   (* XXX what to write? *) 
-  
+
+(* the constant file signature for directory headers *)
+let dir_file_signature = 0x02014b50
+
+(* write the file header in central directory *)
+let write_dir_file_header ochnl dh = 
+  write_4byte_le ochnl dir_file_signature;
+  (* version made by *)
+  write_2byte_le ochnl 0; (* TODO this shouldn't be hardcoded *)
+  (* required version *)
+  write_2byte_le ochnl 0; (* TODO this shouldn't be hardcoded *)
+  (* bit flags *)
+  write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
+  (* compression method *)
+  write_2byte_le ochnl (get_compress_method_code dh.c_method);
+  (* last modification time *)
+  write_4byte_le ochnl dh.mtime;
+  (* last modification date *)
+  write_4byte_le ochnl dh.mdate;
+  (* CRC 32 TODO not sure how to get this*)
+  write_4byte_le ochnl 0;
+  (* compressed size *)
+  write_4byte_le ochnl (int64_to_int dh.uncompressed_size);
+  (* uncompressed size *)
+  write_4byte_le ochnl (int64_to_int dh.compressed_size);
+  (* file name length *)
+  write_4byte_le ochnl (String.length dh.file_name);
+  (* extra comment length *)
+  write_2byte_le ochnl 0;
+  (* file comment length *)
+  write_2byte_le ochnl 0;
+  (* TODO the number of the disk on which this file exists *)
+  write_2byte_le ochnl 0;
+  (* Internal file attributes: *)
+  write_2byte_le ochnl 0;
+  (* External attr.	External file attributes: *)
+  write_2byte_le ochnl 0;
+  (* offset of local file header *)
+  write_4byte_le ochnl (dh.file_offset);
+  (* file name *)
+  Out_channel.output_string ochnl dh.file_name
+  (* extra comment *)
+  (* XXX what to write? *) 
+  (* file comment *)
+  (* XXX what to write? *) 
+
+let end_dir_signature = 0x06054b50
+
+let write_end_dir ochnl = 
+  write_4byte_le ochnl end_dir_signature;
+  (* disk number *)
+  write_2byte_le ochnl 0;
+  (* disk number on which the central directory starts *)
+  write_2byte_le ochnl 0;
+  (* TODO number of central directories on this disk *)
+  write_2byte_le ochnl 0;
+  (* TODO central directory size *)
+  write_4byte_le ochnl 0;
+  (* TODO central directory disk offset *)
+  write_2byte_le ochnl 0;
+  (* comment length *)
+  write_2byte_le ochnl 0
+  (* optional comment *)
+  (* XXX what do I put here? *)
 
 (******************)
 (* main interface *)
