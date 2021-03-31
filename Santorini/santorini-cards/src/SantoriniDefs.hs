@@ -155,12 +155,11 @@ nextS ST{kont = (Action f) : ks, ..}
 
 exitIfS :: (a -> a -> Bool) -> State a -> a
 exitIfS g sa
-  | any f sa = exitS f sa
-  | otherwise = nextS sa
+ = case exitS f sa of
+  (Just b) -> b
+  Nothing -> nextS sa
   where f = g $ init sa
  
-exitS :: (a -> Bool) -> State a -> a
-exitS f ST {states} 
-  = fromMaybe (error "invalid exit on a false state") 
-  $ find f states
+exitS :: (a -> Bool) -> State a -> Maybe a
+exitS f ST {states} = find f states
 
