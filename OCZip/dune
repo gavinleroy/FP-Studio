@@ -1,4 +1,5 @@
-(executable
-  (name oczip)
-  (libraries core lib)
+(executables
+  (names oczip)
+  (libraries core stdint lib zlib)
   (preprocess (pps ppx_jane)))
+

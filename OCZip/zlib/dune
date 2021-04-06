@@ -1,0 +1,5 @@
+(library
+  (name zlib)
+
+  (libraries core stdint)
+  (preprocess (pps ppx_jane)))

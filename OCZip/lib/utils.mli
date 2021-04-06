@@ -18,3 +18,5 @@ val get_compress_method_code: Defs.compress_method -> int
 
 val int64_to_int: Int64.t -> int
 
+val fn_to_byte_stream: string -> int option Stream.t
+

@@ -52,3 +52,11 @@ let int64_to_int i64 =
     | Some a -> a
     | None -> raise (ImpE "64 can't convert to int ...")
 
+(* takes a file name and returns a 
+ * stream of bytes option represented in decimal *)
+let fn_to_byte_stream fn = 
+  let inc = In_channel.create ~binary:true fn in
+  Stream.from
+    (fun _ ->
+       try Some (In_channel.input_byte inc) with End_of_file -> None)
+
