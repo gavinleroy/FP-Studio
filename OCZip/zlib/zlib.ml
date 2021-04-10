@@ -6,6 +6,7 @@
 
 open Core
 open Stdint
+open Lib
 
 (**************************)
 (*         CRC32          *)
@@ -76,11 +77,11 @@ let crc32 stream =
 (*     with a sliding window            *) 
 (*--------------------------------------*)
 
-
-
-
-
-
+let _deflate _instr = 
+  let _dataq = Boolqueue.create () in
+  Stream.from 
+    (fun _ ->
+      Some 0)
 
 
 
@@ -116,7 +117,7 @@ let crc32 stream =
 (*          otherwise *)
 (*             if value = end of block (256) *)
 (*                break from loop *)
-(*******v THIS SHOULD HAPPEN WITH MY CURRENT ENCODER v*********)
+(*******v THIS SHOULDN'T HAPPEN WITH MY CURRENT ENCODER v*********)
 (*             otherwise (value = 257..285) *)
 (*                decode distance from input stream *)
 (*                move backwards distance bytes in the output *)
