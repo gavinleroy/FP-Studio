@@ -9,7 +9,7 @@ type nonrec compress_method =
   | Deflate (** DEFLATE compression ~ https://tools.ietf.org/html/rfc1951#section-3 *)
     (** Compression used for file data storage *)
 
-type local_file_header =
+type nonrec local_file_header =
   { (* flags              : int32;           (** flags *) *)
     c_method           : compress_method; (** method of compression *)
     mtime              : int;             (** time of last modification *)
@@ -24,7 +24,7 @@ type local_file_header =
     file_offset        : int;             (** file offset in the zip *)
   } (**  Contents describing the local file header *)
 
-type inp_archive = 
+type nonrec inp_archive = 
   { filename : string;
     mtime    : int;
     mdate    : int;

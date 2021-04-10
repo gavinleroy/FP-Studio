@@ -9,3 +9,6 @@ all:
 run:
 	@dune exec -- ./oczip.exe $(ARGS)
 
+test:
+	@dune test
+

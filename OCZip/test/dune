@@ -1,0 +1,3 @@
+(tests
+ (names zlib_test lib_test)
+ (libraries lib zlib ounit2))
