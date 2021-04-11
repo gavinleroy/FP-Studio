@@ -12,3 +12,6 @@ run:
 test:
 	@dune test
 
+clean: 
+	rm test.zip
+

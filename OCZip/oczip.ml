@@ -18,7 +18,8 @@ let local_file_signature = 0x04034b50
 let write_local_file_header ochnl fh = 
   write_4byte_le ochnl local_file_signature;
   (* required version *)
-  write_2byte_le ochnl 10; (* TODO this shouldn't be hardcoded *)
+  let ver = match fh.c_method with | Store -> 10 | Deflate -> 20 in
+  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
   (* bit flags *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
   (* compression method *)
@@ -49,9 +50,10 @@ let dir_file_signature = 0x02014b50
 let write_dir_file_header ochnl dh = 
   write_4byte_le ochnl dir_file_signature;
   (* version made by *)
-  write_2byte_le ochnl 10; (* TODO this shouldn't be hardcoded *)
+  let ver = match dh.c_method with | Store -> 10 | Deflate -> 20 in
+  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
   (* required version *)
-  write_2byte_le ochnl 10; (* TODO this shouldn't be hardcoded *)
+  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
   (* bit flags *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
   (* compression method *)
@@ -122,21 +124,16 @@ let open_file_with_stats fn =
     mdate    = getdosfmt_date fstats.st_mtime;
     size     = fstats.st_size; }
 
-let fn_to_header fn off =
+let fn_to_header fn off comp_size =
   let ifile = open_file_with_stats fn in
-  (* TODO we need to compress/encrypt the byte stream and get the new count  *)
-  { c_method           = Store;
+  { c_method           = Deflate;
     mtime              = ifile.mtime;
     mdate              = ifile.mdate;
     crc                = Zlib.crc32 (fn_to_byte_stream ifile.filename);
-    compressed_size    = ifile.size;
-    uncompressed_size  = ifile.size; (* this needs to get ocmputed by zlib TODO  *)
+    compressed_size    = comp_size;
+    uncompressed_size  = ifile.size;
     filename           = ifile.filename;
     file_offset        = off; }
-
-(* let compress_input tgt infns = *) 
-(*   let fes = List.map infns ~f:fn_to_header in *)
-(*   { tgt with files = List.append tgt.files fes } *)
 
 (* function to write all local headers 
  * data and central directory *)
@@ -144,9 +141,12 @@ let write_archive ochnl fns =
   let rec write_files fns = 
     match fns with
     | fn :: fs' -> 
-      let lfh = fn_to_header fn (int64_to_int (Out_channel.pos ochnl)) in
+      let compressed_size, outstr = (Zlib.deflate (fn_to_byte_stream fn)) in 
+      let lfh = fn_to_header fn 
+          (int64_to_int (Out_channel.pos ochnl)) 
+          (Int64.of_int compressed_size) in
       write_local_file_header ochnl lfh;
-      output_stream ochnl (fn_to_byte_stream lfh.filename);
+      output_stream ochnl outstr;
       lfh :: write_files fs'
     | [] -> [] in
   let rec write_dir fs = 

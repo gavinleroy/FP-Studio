@@ -14,9 +14,8 @@ open Lib
 
 let crc32_update' crc byte = 
   let rec inner_loop n crc = 
-    match n with
-    | 0 -> crc
-    | _ -> 
+    if n = 0 then crc
+    else
       inner_loop (n - 1) 
         (Uint32.logxor 
            (Uint32.shift_right crc 1) 
@@ -55,12 +54,6 @@ let crc32 stream =
                                  where the length is drawn from (3..258) 
                                  and the distance is drawn from (1..32,768) *)
 
-(* type nonrec btype = | None | FixHuff | DynHuff | Error *)
-
-(* type nonrec block = *) 
-(*   { bfinal : bool; *)
-(*     bty    : btype; } *)
-
 (*--------------------------------------*)
 (*               Steps                  *)
 (*--------------------------------------*)
@@ -77,16 +70,87 @@ let crc32 stream =
 (*     with a sliding window            *) 
 (*--------------------------------------*)
 
-let _deflate _instr = 
-  let _dataq = Boolqueue.create () in
-  Stream.from 
-    (fun _ ->
-      Some 0)
+type nonrec btype = | N (* | FH | DH | E *)
 
+let max_fix_block_size = 
+  Uint16.to_int Uint16.max_int
 
+(* type nonrec block = *) 
+(*   { bfinal : bool; *)
+(*     b_type : btype; *)
+(*     len    : Uint16.t } *)
 
+let is_even b = 
+  (b land 1) = 0
 
+let enqueue_btype bt q = 
+  match bt with
+  | N  -> Boolqueue.enqueue false (Boolqueue.enqueue false q) (* 00 *)
+  (* | FH -> Boolqueue.enqueue false (Boolqueue.enqueue true  q) (1* 01 *1) *)
+  (* | DH -> Boolqueue.enqueue true  (Boolqueue.enqueue false q) (1* 10 *1) *)
+  (* | E  -> Boolqueue.enqueue true  (Boolqueue.enqueue true  q) (1* 11 *1) *)
 
+let enqueue_byte b q =
+  let rec eq n b q =
+    if n = 0 then q
+    else 
+      eq (n - 1) (b lsr 1)
+      (Boolqueue.enqueue (is_even b) q) in
+  eq 8 b q
+
+let dequeue_byte q =
+  let rec dq n b q = 
+    if n = 0 then Some b, q
+    else
+      let v, q' = Boolqueue.dequeue q in
+      let v' = match v with | Some true -> 1 | Some false -> 0 | None -> 0 in
+      let v'' = (b lsl 1) land v' in
+      dq (n - 1) v'' q' in
+  if Boolqueue.has_byte q 
+  then dq 8 0 q
+  else None, q
+
+let enqueue_block instr q = 
+  let rec loop_search n q = 
+    if n = max_fix_block_size
+    then n, q
+    else match Stream.next instr with
+      | Some i -> loop_search (n + 1) (enqueue_byte i q)
+      | None -> n, q in
+  let rec loop_swap src tgt = 
+    match Boolqueue.dequeue src with
+    | Some b, srcq -> loop_swap srcq (Boolqueue.enqueue b tgt)
+    | None, _ -> tgt in
+  let wrote, qtemp = loop_search 0 (Boolqueue.create ()) in
+  let is_final = match Stream.peek instr with | None | Some None -> true | _ -> false in
+  Printf.printf "is final? %b\n" is_final;
+  let q' = Boolqueue.enqueue is_final q in
+  let q'' = enqueue_byte (wrote lsr 4) (enqueue_byte wrote q') in
+  let wrote = lnot wrote in
+  let q''' = enqueue_byte (wrote lsr 4) (enqueue_byte wrote q'') in
+  let q'''' = (enqueue_btype N q''') in
+  wrote + 5, loop_swap qtemp q''''
+
+let enqueue_file instr q = 
+  let rec do_block n q = 
+    Printf.printf "enqueued %d bytes so far\n" n;
+    match Stream.peek instr with
+    | None | Some None -> n, q
+    | _ -> 
+      let n', q' = enqueue_block instr q in
+      do_block (n + n') q' in
+  do_block 0 q
+
+let deflate instr = 
+  print_endline "deflate started";
+  let rec make_list q = 
+    match dequeue_byte q with
+    | None, _ -> [None]
+    | ob, nq -> ob :: make_list nq in
+  let written_bytes, fullq = enqueue_file instr (Boolqueue.create ()) in
+  (* NOTE the stream should be int option Stream.t *)
+  print_endline "deflate done";
+  written_bytes, Stream.of_list (make_list fullq)
 
 (************************************************)
 (* Lit Value  Bits  Codes                       *)

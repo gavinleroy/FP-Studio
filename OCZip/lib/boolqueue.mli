@@ -12,3 +12,7 @@ val enqueue: bool -> bqueue -> bqueue
 
 val dequeue: bqueue -> (bool option) * bqueue
 
+val has_byte: bqueue -> bool 
+
+val is_empty: bqueue -> bool
+

@@ -33,3 +33,9 @@ let dequeue q =
              Bigint.zero)
     , { q with size = new_size })
 
+let has_byte q = 
+  q.size >= 8
+
+let is_empty q = 
+  q.size = 0
+
