@@ -126,6 +126,7 @@ let open_file_with_stats fn =
 
 let fn_to_header fn off comp_size =
   let ifile = open_file_with_stats fn in
+  (* { c_method           = Store; *)
   { c_method           = Deflate;
     mtime              = ifile.mtime;
     mdate              = ifile.mdate;
@@ -141,6 +142,7 @@ let write_archive ochnl fns =
   let rec write_files fns = 
     match fns with
     | fn :: fs' -> 
+      (* let compressed_size, outstr = (int64_to_int (Out_channel.pos ochnl)), (fn_to_byte_stream fn) in *)
       let compressed_size, outstr = (Zlib.deflate (fn_to_byte_stream fn)) in 
       let lfh = fn_to_header fn 
           (int64_to_int (Out_channel.pos ochnl)) 

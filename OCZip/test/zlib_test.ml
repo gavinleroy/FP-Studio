@@ -7,6 +7,28 @@
 open OUnit2
 open Lib
 
+(************************************************)
+(*                DEFLATE TESTS                 *)
+(************************************************)
+
+let defl_test1 _ =
+  let istr = Stream.of_list [Some 0x61; Some 0x62; Some 0x63; None] in
+  let s, ostr = Zlib.deflate istr in
+  let rec to_l str = 
+    match Stream.next str with
+    | None -> []
+    | Some x -> x :: to_l str in
+  let ol = to_l ostr in
+  assert_equal 
+    ~msg:"size not equal defl_test1"
+    ~printer:string_of_int
+    8 s;
+  assert_equal 
+    ~msg:"lists not equal"
+    [0x01; 0x03; 0x00; 0xfc; 0xff; 0x61; 0x62; 0x63]
+    ol
+
+
 let rel_path = 
   "../test/test-files/"
 
@@ -85,7 +107,8 @@ let suite =
     "crc32-test3" >:: crc_test3;
     "crc32-test4" >:: crc_test4;
     "crc32-update-test1" >:: crc_update_test1;
-    "crc32-update-test4" >:: crc_update_test4
+    "crc32-update-test4" >:: crc_update_test4;
+    "deflate-test1" >:: defl_test1;
   ]
 
 let () =

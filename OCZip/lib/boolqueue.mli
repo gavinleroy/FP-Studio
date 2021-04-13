@@ -4,15 +4,19 @@
 (*    Spring 21 -- OCZip    *)
 (****************************)
 
-type bqueue
+type t
 
-val create: unit -> bqueue
+val create: unit -> t
 
-val enqueue: bool -> bqueue -> bqueue
+val has_byte: t -> bool 
 
-val dequeue: bqueue -> (bool option) * bqueue
+val is_empty: t -> bool
 
-val has_byte: bqueue -> bool 
+val enqueue: bool -> t -> t
 
-val is_empty: bqueue -> bool
+val dequeue: t -> bool option * t
+
+val enqueue_byte: int -> t -> t
+
+val dequeue_byte: t -> int option * t
 
