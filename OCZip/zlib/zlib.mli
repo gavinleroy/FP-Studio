@@ -4,7 +4,7 @@
 (*    Spring 21 -- OCZip    *)
 (****************************)
 
-module Hufftree = Hufftree
+module Huffman = Hufftree
 
 (** given a stream of bytes compute the CRC32 *)
 val crc32: int option Stream.t -> int

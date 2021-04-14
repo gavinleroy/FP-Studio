@@ -11,23 +11,20 @@ open Lib
 (*                DEFLATE TESTS                 *)
 (************************************************)
 
+(* test taken from *) 
+(* https://stackoverflow.com/questions/32419086/the-structure-of-deflate-compressed-block *)
 let defl_test1 _ =
-  let istr = Stream.of_list [Some 0x61; Some 0x62; Some 0x63; None] in
-  let s, ostr = Zlib.deflate istr in
+  let istr = Stream.of_list [Some 0x61; Some 0x0a; None;] in
+  let _, ostr = Zlib.deflate istr in
   let rec to_l str = 
     match Stream.next str with
     | None -> []
     | Some x -> x :: to_l str in
   let ol = to_l ostr in
   assert_equal 
-    ~msg:"size not equal defl_test1"
-    ~printer:string_of_int
-    8 s;
-  assert_equal 
     ~msg:"lists not equal"
-    [0x01; 0x03; 0x00; 0xfc; 0xff; 0x61; 0x62; 0x63]
+    [ 0x4b; 0xe4; 0x02; 0x00; ]
     ol
-
 
 let rel_path = 
   "../test/test-files/"

@@ -24,44 +24,29 @@ let obp' v =
 (*  queue: ~BACK  1 0 1 1  FRONT~> *)
 let setup () = 
   let q = Boolqueue.create () in
-  Boolqueue.enqueue true
-    (Boolqueue.enqueue false 
-       (Boolqueue.enqueue true
-          (Boolqueue.enqueue true q)))
+  Boolqueue.enqueue_all 
+    [ true; true; false; true; ] q
 
-let queue_test5 _ = 
-  let s1, s2 = 0x2c, 0xe7 in
-  let q = Boolqueue.create () in
-  let q' = Boolqueue.enqueue_byte s1 q in
-  let q'' = Boolqueue.enqueue_byte s2 q' in
-  let v1, q' = Boolqueue.dequeue_byte q'' in
-  let v2, _ = Boolqueue.dequeue_byte q' in
+let queue_test4 ctx = 
+  (* ~back~ 0110 1011 ~front~> *)
+  let q = Boolqueue.enqueue_all 
+      [ false; true; true; false; ] ctx in
+  let v1, _ = Boolqueue.dequeue_byte q in
   assert_equal
     ~msg:"dequeueing byte"
     ~printer:obp'
-    (Some s1) v1;
-  assert_equal
-    ~msg:"dequeueing byte"
-    ~printer:obp'
-    (Some s2) v2
-
-let queue_test4 _ = 
-  let q = Boolqueue.create () in
-  let q' = Boolqueue.enqueue_byte 0x63 q in
-  let v1, _ = Boolqueue.dequeue_byte q' in
-  assert_equal
-    ~msg:"dequeueing byte"
-    ~printer:obp'
-    (Some 0x63) v1
+    (Some 0b01101011) v1
 
 (* test3 requires an empty queue *)
-let queue_test3 q = 
-  let start_num = 200000 in
-  let ft = (fun x -> (x land 1)=0) in
+let queue_test3 _ = 
+  let q = Boolqueue.create () in
+  let start_num = 1000000 in
+  let ft = (fun x -> (x land 1) = 1) in
   let rec fill n q' =
     match n with
     | 0 -> q'
-    | _ -> fill (n - 1) (Boolqueue.enqueue (ft n) q') in
+    | _ -> 
+      fill (n - 1) (Boolqueue.enqueue (ft n) q') in
   let rec ass n q' = 
     match n with
     | 0 -> ()
@@ -93,9 +78,8 @@ let suite =
   "TestLib" >::: [
     "queue_test1" >:: (fun _ -> queue_test1 (setup ()));
     "queue_test2" >:: (fun _ -> queue_test2 (setup ()));
-    "queue_test3" >:: (fun _ -> queue_test3 (Boolqueue.create ()));
-    "queue_test4" >:: queue_test4;
-    "queue_test5" >:: queue_test5;
+    "queue_test3" >:: queue_test3;
+    "queue_test4" >:: (fun _ -> queue_test4 (setup ()));
   ]
 
 let () =

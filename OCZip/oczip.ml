@@ -31,9 +31,9 @@ let write_local_file_header ochnl fh =
   (* CRC 32 TODO not sure how to get this*)
   write_4byte_le ochnl fh.crc;
   (* compressed size *)
-  write_4byte_le ochnl (int64_to_int fh.uncompressed_size);
+  write_4byte_le ochnl fh.compressed_size;
   (* uncompressed size *)
-  write_4byte_le ochnl (int64_to_int fh.compressed_size);
+  write_4byte_le ochnl fh.uncompressed_size;
   (* file name size *)
   write_2byte_le ochnl (String.length fh.filename);
   (* extra comment size *)
@@ -65,9 +65,9 @@ let write_dir_file_header ochnl dh =
   (* CRC 32 not sure how to get this*)
   write_4byte_le ochnl (Zlib.crc32 (fn_to_byte_stream dh.filename));
   (* compressed size *)
-  write_4byte_le ochnl (int64_to_int dh.uncompressed_size);
+  write_4byte_le ochnl  dh.compressed_size;
   (* uncompressed size *)
-  write_4byte_le ochnl (int64_to_int dh.compressed_size);
+  write_4byte_le ochnl dh.uncompressed_size;
   (* file name length *)
   write_2byte_le ochnl (String.length dh.filename);
   (* extra comment length *)
@@ -132,7 +132,7 @@ let fn_to_header fn off comp_size =
     mdate              = ifile.mdate;
     crc                = Zlib.crc32 (fn_to_byte_stream ifile.filename);
     compressed_size    = comp_size;
-    uncompressed_size  = ifile.size;
+    uncompressed_size  = (int64_to_int ifile.size);
     filename           = ifile.filename;
     file_offset        = off; }
 
@@ -142,11 +142,17 @@ let write_archive ochnl fns =
   let rec write_files fns = 
     match fns with
     | fn :: fs' -> 
-      (* let compressed_size, outstr = (int64_to_int (Out_channel.pos ochnl)), (fn_to_byte_stream fn) in *)
-      let compressed_size, outstr = (Zlib.deflate (fn_to_byte_stream fn)) in 
+      let compressed_size, outstr = 
+        (Zlib.deflate (fn_to_byte_stream fn)) in 
       let lfh = fn_to_header fn 
           (int64_to_int (Out_channel.pos ochnl)) 
-          (Int64.of_int compressed_size) in
+          compressed_size in
+      let pct = 
+        (Int.to_float compressed_size) 
+        /. (Int.to_float lfh.uncompressed_size) 
+        *. 100. in
+      (* probably shouldn't print in whichever function *)
+      Printf.printf "~ ADDING \"%s\" ~~ DEFLATED ~> %.2f%%\n" lfh.filename pct;
       write_local_file_header ochnl lfh;
       output_stream ochnl outstr;
       lfh :: write_files fs'
@@ -175,14 +181,16 @@ let create_zip ~srcs:infns ~tgt:outfn =
 
 let command =
   Command.basic
-    ~summary:"TODO"
+    ~summary:"OCZIP : the OCaml file compression tool"
     ~readme:(fun () -> "TODO")
     Command.Let_syntax.(
       let%map_open 
         tgt = anon ("tgt" %: string) 
       and 
         srcs = anon (sequence ("filename" %: Filename.arg_type))
-      in fun () -> create_zip ~srcs:srcs ~tgt:tgt)
+      in fun () -> 
+        try create_zip ~srcs:srcs ~tgt:tgt
+        with _ -> print_endline "** a fatal error occured **")
 
 let () =
   Command.run ~version:"0.1" ~build_info:"RWO" command

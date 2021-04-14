@@ -6,7 +6,7 @@
 
 open Core
 
-exception EmptyQ of string
+exception EmptyQ
 
 type t = bool Queue.t
 
@@ -42,6 +42,10 @@ let enqueue b q =
   Queue.enqueue q b;
   q
 
+let enqueue_all v q =
+  Queue.enqueue_all q v;
+  q
+
 (* let dequeue q = *)
 (*   let new_size = q.size - 1 in *)
 (*   match q.size with *)
@@ -54,29 +58,41 @@ let enqueue b q =
 let dequeue q =
  Queue.dequeue q, q
 
-let enqueue_byte b q =
-  let rec eq n b q =
-    let is_even b = 
-      (b land 1) = 1 in
-    if n < 0 then q
-    else 
-      let v = (is_even (b lsr n)) in
-      eq (n - 1) b (enqueue v q) in
-  eq 7 b q
+(* let enqueue_byte b q = *)
+(*   let rec eq n b q = *)
+(*     let is_even b = *) 
+(*       (b land 1) = 1 in *)
+(*     if n < 0 then q *)
+(*     else *) 
+(*       let v = (is_even (b lsr n)) in *)
+(*       eq (n - 1) b (enqueue v q) in *)
+(*   eq 7 b q *)
 
+let rec build_byte q acc n ~success:f ~failure:esc =
+  let b2i = fun b -> 
+    match b with | true -> 1 | false -> 0 in
+  if n = 8 then f acc, q
+  else match dequeue q with
+    | Some bo, q' -> 
+      let bi = b2i bo in
+      build_byte q' 
+        (acc lor (bi lsl n)) 
+        (n + 1) 
+        ~success:f
+        ~failure:esc
+    | None, q' -> esc acc q'
+
+(* if the queue has ~FRONT~ 1 1 0 0 ~BACK~ 
+ * 0011 *)
 let dequeue_byte q =
-  let rec dq n b q' = 
-    if n < 0 then Some b, q'
-    else
-      let v, q'' = dequeue q' in
-      let v' = 
-        match v with 
-        | Some true -> 1 
-        | Some false -> 0 
-        | None -> raise (EmptyQ "unreachable!") in
-      let v'' = ((b lsl 1) lor v') in
-      dq (n - 1) v'' q'' in
-  if has_byte q 
-  then dq 7 0 q
-  else None, q
+  if Queue.length q < 8 
+  then None, q
+  else build_byte q 0 0 
+    ~success:(fun a -> Some a)
+    ~failure:(fun _ _ -> raise EmptyQ)
+
+let dequeue_byte_force q =
+  build_byte q 0 0 
+    ~success:ident
+    ~failure:(fun a b -> a, b)
 
