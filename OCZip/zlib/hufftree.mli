@@ -8,6 +8,10 @@ type decoder
 
 type encoder
 
+exception TreeFull
+
+exception Fatal
+
 (* val decode: 'a tree -> < some bit data structure > -> 'a *) 
 
 val fixed_encoder: encoder

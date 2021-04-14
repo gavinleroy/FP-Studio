@@ -17,7 +17,6 @@ type nonrec local_file_header =
     crc                : int;           (** crc32 checksum *)
     compressed_size    : int;             (** size of compressed file *)
     uncompressed_size  : int;             (** size of uncompressed file *)
-    (* file_name_length   : int32;             (** length of the file name *) *)
     (* extra_field_length : int32;             (** extra field length *) *)
     filename          : string;          (** file name as a string *)
     (* extra              : string;           (** extra information *) *)

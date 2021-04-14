@@ -7,7 +7,7 @@
 open Core
 open Defs
 
-exception ImpE of string
+exception ImpExn of string
 
 let write_1byte ochnl n = 
   Out_channel.output_byte ochnl n
@@ -50,7 +50,7 @@ let get_compress_method_code cmthd =
 let int64_to_int i64 = 
   match Int64.to_int i64 with
   | Some a -> a
-  | None -> raise (ImpE "64 can't convert to int ...")
+  | None -> raise (ImpExn "64 can't convert to int ...")
 
 (* takes a file name and returns a 
  * stream of bytes option represented in decimal *)
@@ -60,4 +60,10 @@ let fn_to_byte_stream fn =
     (fun _ ->
        try Some (In_channel.input_byte inc) 
        with End_of_file -> None)
+
+let compute_ratio_float lhs rhs =
+  lhs /. rhs *. 100.
+
+let compute_ratio_int lhs rhs =
+  compute_ratio_float (Int.to_float lhs) (Int.to_float rhs)
 

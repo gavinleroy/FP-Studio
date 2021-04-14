@@ -19,7 +19,7 @@ let write_local_file_header ochnl fh =
   write_4byte_le ochnl local_file_signature;
   (* required version *)
   let ver = match fh.c_method with | Store -> 10 | Deflate -> 20 in
-  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
+  write_2byte_le ochnl ver;
   (* bit flags *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
   (* compression method *)
@@ -36,12 +36,12 @@ let write_local_file_header ochnl fh =
   write_4byte_le ochnl fh.uncompressed_size;
   (* file name size *)
   write_2byte_le ochnl (String.length fh.filename);
-  (* extra comment size *)
+  (* XXX TODO extra comment size *)
   write_2byte_le ochnl 0;
   (* file name *)
   Out_channel.output_string ochnl fh.filename
 (* extra comment *)
-(* XXX what to write? *) 
+(* XXX TODO print out something 'empty string' *) 
 
 (* the constant file signature for directory headers *)
 let dir_file_signature = 0x02014b50
@@ -51,9 +51,9 @@ let write_dir_file_header ochnl dh =
   write_4byte_le ochnl dir_file_signature;
   (* version made by *)
   let ver = match dh.c_method with | Store -> 10 | Deflate -> 20 in
-  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
+  write_2byte_le ochnl ver;
   (* required version *)
-  write_2byte_le ochnl ver; (* TODO this shouldn't be hardcoded *)
+  write_2byte_le ochnl ver;
   (* bit flags *)
   write_2byte_le ochnl 0; (* TODO this shouldn't be hard coded *)
   (* compression method *)
@@ -62,7 +62,7 @@ let write_dir_file_header ochnl dh =
   write_2byte_le ochnl dh.mtime;
   (* last modification date *)
   write_2byte_le ochnl dh.mdate;
-  (* CRC 32 not sure how to get this*)
+  (* CRC 32 this could be done when trying to deflate *)
   write_4byte_le ochnl (Zlib.crc32 (fn_to_byte_stream dh.filename));
   (* compressed size *)
   write_4byte_le ochnl  dh.compressed_size;
@@ -110,7 +110,7 @@ let write_end_dir ochnl ndirs dirsize cdoff =
 (* optional comment *)
 (* XXX what do I put here? *)
 
-(* possibly return bytes written TODO *)
+(* possibly return bytes written ?? *)
 let rec output_stream ochnl dstr = 
   match Stream.next dstr with
   | Some b -> Out_channel.output_byte ochnl b;
@@ -139,30 +139,21 @@ let fn_to_header fn off comp_size =
 (* function to write all local headers 
  * data and central directory *)
 let write_archive ochnl fns =
-  let rec write_files fns = 
-    match fns with
-    | fn :: fs' -> 
-      let compressed_size, outstr = 
-        (Zlib.deflate (fn_to_byte_stream fn)) in 
-      let lfh = fn_to_header fn 
-          (int64_to_int (Out_channel.pos ochnl)) 
-          compressed_size in
-      let pct = 
-        (Int.to_float compressed_size) 
-        /. (Int.to_float lfh.uncompressed_size) 
-        *. 100. in
-      (* probably shouldn't print in whichever function *)
-      Printf.printf "~ ADDING \"%s\" ~~ DEFLATED ~> %.2f%%\n" lfh.filename pct;
-      write_local_file_header ochnl lfh;
-      output_stream ochnl outstr;
-      lfh :: write_files fs'
-    | [] -> [] in
-  let rec write_dir fs = 
-    match fs with
-    | lfh :: fs' ->
-      write_dir_file_header ochnl lfh;
-      1 + write_dir fs'
-    | [] -> 0 in
+  let write_files fns = 
+    List.map fns ~f:(fun fn -> 
+        let compressed_size, outstr = 
+          fn_to_byte_stream fn |> Zlib.deflate in 
+        let lfh = fn_to_header fn 
+            (int64_to_int (Out_channel.pos ochnl)) 
+            compressed_size in
+        let pct = 
+          compute_ratio_int compressed_size lfh.uncompressed_size in
+        Printf.printf "\t~ adding \"%s\" ~~ deflated ~> %.2f%%\n" lfh.filename pct;
+        write_local_file_header ochnl lfh;
+        output_stream ochnl outstr; lfh) in
+  let write_dir fs = 
+    List.fold_left fs ~init:0
+      ~f:(fun acc a -> write_dir_file_header ochnl a; acc + 1) in
   let lfhs    = write_files fns in
   let s_pos   = Out_channel.pos ochnl in
   let ndirs   = write_dir lfhs in
@@ -171,9 +162,14 @@ let write_archive ochnl fns =
   write_end_dir ochnl ndirs dirsize s_pos
 
 let create_zip ~srcs:infns ~tgt:outfn =
-  let ochnl = Out_channel.create ~binary:true outfn in
-  write_archive ochnl infns; 
-  Out_channel.close ochnl
+  Printf.printf "creating zip archive \"%s\"\n" outfn;
+  try 
+    let ochnl = Out_channel.create ~binary:true outfn in
+    write_archive ochnl infns; 
+    Out_channel.close ochnl
+  with 
+  | Zlib.ZlibExn s -> Printf.printf "a Zlib error occured ~\n\t\"%s\"\n" s
+  | _ -> print_endline "** a fatal error occured **"
 
 (******************)
 (* main interface *)
@@ -188,9 +184,7 @@ let command =
         tgt = anon ("tgt" %: string) 
       and 
         srcs = anon (sequence ("filename" %: Filename.arg_type))
-      in fun () -> 
-        try create_zip ~srcs:srcs ~tgt:tgt
-        with _ -> print_endline "** a fatal error occured **")
+      in fun () -> create_zip ~srcs:srcs ~tgt:tgt)
 
 let () =
   Command.run ~version:"0.1" ~build_info:"RWO" command

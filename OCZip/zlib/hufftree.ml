@@ -25,9 +25,9 @@ type decoder = int tree
 
 type encoder = (int, bitlist, Int.comparator_witness) Map.t
 
-(************************)
-(*  functions on trees  *)
-(************************)
+(**********************************)
+(*  functions on decoders (trees) *)
+(**********************************)
 
 let rec build_at_depth nd v d ch =
   if ch > d then raise Fatal

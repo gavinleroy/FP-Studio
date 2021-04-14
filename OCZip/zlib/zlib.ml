@@ -12,6 +12,11 @@ module Huffman = Hufftree
 
 exception ZlibExn of string
 
+type nonrec compression_level =
+  | Zero (** Store only, no compression done *)
+  | One  (** Only encode with huffman codes, why include this? educational purposes *)
+  | Two  (** Compress with huffman codes and lz77 encodings *)
+
 (**************************)
 (*         CRC32          *)
 (**************************)
@@ -19,17 +24,14 @@ exception ZlibExn of string
 let crc32_update' crc byte = 
   let rec inner_loop n crc = 
     if n = 0 then crc
-    else
-      inner_loop (n - 1) 
-        (Uint32.logxor 
-           (Uint32.shift_right crc 1) 
-           (Uint32.logand 
-              (Uint32.of_int 0xEDB88320)
-              (Uint32.neg (Uint32.logand crc (Uint32.of_int 1))))) in 
-  (Uint32.logxor crc (Uint32.of_int byte))
+    else (Uint32.neg (Uint32.logand crc (Uint32.of_int 1)))
+         |> Uint32.logand (Uint32.of_int 0xEDB88320)
+         |> Uint32.logxor (Uint32.shift_right crc 1) 
+         |> inner_loop (n - 1) in 
+  Uint32.of_int byte
+  |> Uint32.logxor crc
   |> inner_loop 8 
 
-(** provide an incremental way to update the crc with a byte *)
 let crc32_update crc byte = 
   (Uint32.to_int 
      (Uint32.lognot 
@@ -37,36 +39,38 @@ let crc32_update crc byte =
            (Uint32.lognot (Uint32.of_int crc)) 
            byte)))
 
-(** compute the crc32 of the given byte stream *)
 let crc32 stream = 
   let rec outer_loop crc = 
     match Stream.next stream with
     | None -> crc
     | Some b -> 
-      outer_loop (crc32_update' crc b) in
-  (Uint32.to_int (Uint32.lognot 
-                    (outer_loop (Uint32.of_int 0xFFFFFFFF))))
+      crc32_update' crc b
+      |> outer_loop  in
+  Uint32.of_int 0xFFFFFFFF
+  |> outer_loop 
+  |> Uint32.lognot 
+  |> Uint32.to_int 
 
 (****************************************)
 (*     Deflate Utils and Algorithm      *)
 (****************************************)
 
-(*--------------------------------------*)
-(*--------------------------------------*)
-(*               Steps                  *)
-(*--------------------------------------*)
-(*   1. write byte stream in ALL        *)
-(*     uncompressed blocks              *)
-(*--------------------------------------*)
-(*--------------------------------------*)
-(*   2. only compress bytes with static *)
-(*     huffman encoding                 *)
-(*--------------------------------------*)
-(*--------------------------------------*)
-(*   3. get the lz77 algorithm working  *)
-(*     with a sliding window            *) 
-(*--------------------------------------*)
-(*--------------------------------------*)
+(*----------------------------------------*)
+(*----------------------------------------*)
+(*                Steps                   *)
+(*----------------------------------------*)
+(*     1. write byte stream in ALL        *)
+(*       uncompressed blocks              *)
+(*----------------------------------------*)
+(*----------------------------------------*)
+(* XXX 2. only compress bytes with static *)
+(*       huffman encoding                 *)
+(*----------------------------------------*)
+(*----------------------------------------*)
+(*     3. get the lz77 algorithm working  *)
+(*       with a sliding window            *) 
+(*----------------------------------------*)
+(*----------------------------------------*)
 
 (* let max_fix_block_size = *) 
 (*   Uint16.to_int Uint16.max_int *)
@@ -105,7 +109,7 @@ let crc32 stream =
 (*       do_block (n + n') q'' in *)
 (*   do_block 0 q *)
 
-(* let deflate instr = *) 
+(* let deflate_store_only instr = *) 
 (*   print_endline "deflate started"; *)
 (*   let rec make_list q = *) 
 (*     match Boolqueue.dequeue_byte q with *)
@@ -115,11 +119,9 @@ let crc32 stream =
 (*   print_endline "deflate done"; *)
 (*   written_bytes, Stream.of_list (make_list fullq) *)
 
-let deflate instr =
-  let q = Boolqueue.enqueue_all 
-      [true; true; false;] (* these are the hardcoded values for 
-                             'BFINAL' (1) and 'BTYPE' (01) *)
-      (Boolqueue.create ()) in
+let deflate_huffman_only instr =
+  let q = Boolqueue.create ()
+          |> Boolqueue.enqueue_all [true; true; false;] in
   let rec eq_all qu =
     match Stream.next instr with
     | None -> Boolqueue.enqueue_all Huffman.end_of_stream_byte qu
@@ -129,14 +131,21 @@ let deflate instr =
       | Some b -> eq_all (Boolqueue.enqueue_all b qu) in
   let rec remove_all qu cnt =
     match Boolqueue.dequeue_byte qu with
-    | Some b, qu' -> 
+    | Some b, qu' ->
       let w, ll = remove_all qu' (cnt + 1) in
       w, Some b :: ll
     | None, qu' -> 
-      (cnt + 1), [Some (fst (Boolqueue.dequeue_byte_force qu')); None;] in
+      (cnt + 1)
+    , [Some (fst (Boolqueue.dequeue_byte_force qu')); None;] in
   let q = eq_all q in
   let len, bites = remove_all q 0 in
   len, Stream.of_list bites
+
+let deflate ?(level=One) instr =
+  match level with
+  | Zero -> raise (ZlibExn "don't call this pls")
+  | One -> deflate_huffman_only instr
+  | Two -> raise (ZlibExn "LZ77 currently unsupported")
 
 (* DECODING ALGORITHM *)
 (* do *)
