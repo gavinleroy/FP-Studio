@@ -21,6 +21,8 @@ type 'a tree =
 
 type bitlist = bool list
 
+type decoder = int tree
+
 type encoder = (int, bitlist, Int.comparator_witness) Map.t
 
 (************************)

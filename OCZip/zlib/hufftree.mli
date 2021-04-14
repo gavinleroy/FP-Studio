@@ -4,7 +4,7 @@
 (*    Spring 21 -- OCZip    *)
 (****************************)
 
-type 'a tree
+type decoder
 
 type encoder
 
@@ -20,7 +20,7 @@ val encode: encoder -> int -> bool list option
 
 (* val of_freqs: int * int list -> t *)
 
-val of_lens: (int * int) list -> int tree option
+val of_lens: (int * int) list -> decoder option
 
-val to_sexp: int tree -> string
+val to_sexp: decoder -> string
 
