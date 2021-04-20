@@ -6,19 +6,31 @@
 
 type t
 
+(********* general helperss *********)
+
 val create: unit -> t
+
+val of_byte_list: int list -> t
 
 val has_byte: t -> bool 
 
 val is_empty: t -> bool
 
-val enqueue: bool -> t -> t
+val len_in_bytes: t -> int
 
-val enqueue_all: bool list -> t -> t
+(********* enqueuing values *********)
+
+val enqueue: t -> bool -> t
+
+val enqueue_all: t -> bool list -> t
+
+val enqueue_byte: t -> int -> t
+
+val enqueue_from: t -> t -> t
+
+(********* dequeuing values *********)
 
 val dequeue: t -> bool option * t
-
-(* val enqueue_byte: int -> t -> t *)
 
 val dequeue_byte: t -> int option * t
 

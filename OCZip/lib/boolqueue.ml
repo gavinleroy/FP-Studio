@@ -10,63 +10,40 @@ exception EmptyQ
 
 type t = bool Queue.t
 
-(* type nonrec t = *) 
-(*   { data : Bigint.t; *)
-(*     size : int } *)
-
-(* let create () = *) 
-(*   { data = Bigint.zero; *)
-(*     size = 0 } *)
 let create () = 
   Queue.create ()
 
-(* let has_byte q = *) 
-(*   q.size >= 8 *)
 let has_byte q = 
   Queue.length q >= 8
 
-(* let is_empty q = *) 
-(*   q.size = 0 *)
 let is_empty q = 
   Queue.is_empty q
 
-(* let enqueue b { data; size; } = *)
-(*   let new_data = *) 
-(*     match b with *)
-(*     | true -> *) 
-(*       Bigint.bit_or (Bigint.shift_left data 1) Bigint.one *)
-(*     | false -> *)
-(*       Bigint.shift_left data 1 in *)
-(*   { data = new_data; size = size + 1 } *)
-let enqueue b q = 
+let enqueue q b = 
   Queue.enqueue q b;
   q
 
-let enqueue_all v q =
+let enqueue_all q v =
   Queue.enqueue_all q v;
   q
 
-(* let dequeue q = *)
-(*   let new_size = q.size - 1 in *)
-(*   match q.size with *)
-(*   | 0 -> (None, q) *)
-(*   | _ -> *)  
-(*     (Some (Bigint.(>) *)
-(*              (Bigint.bit_and (Bigint.shift_right q.data new_size) Bigint.one) *)
-(*              Bigint.zero) *)
-(*     , { q with size = new_size }) *)
 let dequeue q =
  Queue.dequeue q, q
 
-(* let enqueue_byte b q = *)
-(*   let rec eq n b q = *)
-(*     let is_even b = *) 
-(*       (b land 1) = 1 in *)
-(*     if n < 0 then q *)
-(*     else *) 
-(*       let v = (is_even (b lsr n)) in *)
-(*       eq (n - 1) b (enqueue v q) in *)
-(*   eq 7 b q *)
+let rec enqueue_from s t =
+  match dequeue s with
+  | Some b, s' -> enqueue_from s' (enqueue t b)  
+  | None, _ -> t
+
+(* given the num 0b0011 
+ * the queue is ~FRONT~ 1 1 0 0 ~BACK~ *)
+let enqueue_byte q b =
+  let is_high x = (x land 1) = 1 in
+  let rec eq n b q =
+    if n = 0 then q
+    else eq (n - 1) 
+        (b lsr 1) (enqueue q (is_high b)) in
+  eq 8 b q
 
 let rec build_byte q acc n ~success:f ~failure:esc =
   let b2i = fun b -> 
@@ -95,4 +72,12 @@ let dequeue_byte_force q =
   build_byte q 0 0 
     ~success:ident
     ~failure:(fun a b -> a, b)
+
+let len_in_bytes q =
+  let len = Queue.length q in
+  if len % 8 = 0 then len / 8
+  else 1 + (len / 8)
+
+let of_byte_list bs =
+  List.fold_left bs ~init:(create ()) ~f:enqueue_byte
 

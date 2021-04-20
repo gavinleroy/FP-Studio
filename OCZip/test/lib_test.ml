@@ -25,12 +25,22 @@ let obp' v =
 let setup () = 
   let q = Boolqueue.create () in
   Boolqueue.enqueue_all 
-    [ true; true; false; true; ] q
+    q [ true; true; false; true; ]
+
+let queue_test5 _ =
+  let ctx = Boolqueue.create () in
+  let v = 0b01100101 in
+  let q = Boolqueue.enqueue_byte ctx v in
+  let v1, _ = Boolqueue.dequeue_byte q in
+  assert_equal
+    ~msg:"enqueueing byte"
+    ~printer:obp'
+    (Some v) v1
 
 let queue_test4 ctx = 
   (* ~back~ 0110 1011 ~front~> *)
   let q = Boolqueue.enqueue_all 
-      [ false; true; true; false; ] ctx in
+      ctx [ false; true; true; false; ] in
   let v1, _ = Boolqueue.dequeue_byte q in
   assert_equal
     ~msg:"dequeueing byte"
@@ -46,7 +56,7 @@ let queue_test3 _ =
     match n with
     | 0 -> q'
     | _ -> 
-      fill (n - 1) (Boolqueue.enqueue (ft n) q') in
+      fill (n - 1) (Boolqueue.enqueue q' (ft n)) in
   let rec ass n q' = 
     match n with
     | 0 -> ()
@@ -80,6 +90,7 @@ let suite =
     "queue_test2" >:: (fun _ -> queue_test2 (setup ()));
     "queue_test3" >:: queue_test3;
     "queue_test4" >:: (fun _ -> queue_test4 (setup ()));
+    "queue_test5" >:: queue_test5;
   ]
 
 let () =
