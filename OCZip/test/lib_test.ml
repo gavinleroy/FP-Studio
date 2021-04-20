@@ -6,6 +6,7 @@
 
 open OUnit2
 open Lib
+open Boolqueue
 
 (*****************************************)
 (*             BOOLEAN QUEUE             *)

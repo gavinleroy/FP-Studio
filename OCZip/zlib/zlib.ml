@@ -7,8 +7,9 @@
 open Core
 open Stdint
 open Lib
-
-module Huffman = Hufftree
+open Boolqueue
+open Huffman
+open Lz77
 
 exception ZlibExn of string
 
@@ -105,8 +106,23 @@ let deflate_huffman_only instr queue =
   Boolqueue.enqueue_all queue static_huffman_block_header
   |> eq_all
 
+(* WINDOW SIZE 32K *)
+let max_window_size =
+  32 * 1024
+
+let deflate_static instr queue =
+  let rec eq_all lz77win qu =
+    match LZ77.find_match lz77win instr with
+    | LZ77.Empty, _ -> Boolqueue.enqueue_all qu Huffman.end_of_stream_byte
+    | LZ77.Literal i, win' ->
+      match Huffman.encode Huffman.fixed_encoder i with
+      | None -> raise (ZlibExn "invalid byte found in input stream")
+      | Some b -> eq_all win' (Boolqueue.enqueue_all qu b) in 
+  Boolqueue.enqueue_all queue static_huffman_block_header
+  |> eq_all (LZ77.create ~back:max_window_size ~ahead:max_window_size ~str:instr)
+
 (** main entry point for the deflate algorithm  *)
-let deflate ?(level=One) instr =
+let deflate ?(level=Two) instr =
   (* TODO : read in a buffer of bytes, doing some heuristics at the
    * same time. Switch on whether this block is better using the
    * static codes or the dynamic codes. *)
@@ -115,7 +131,7 @@ let deflate ?(level=One) instr =
     (* each option should return the queue that is filled with bytes *)
     | Zero -> raise (ZlibExn "don't call this pls")
     | One -> deflate_huffman_only instr emptyq
-    | Two -> raise (ZlibExn "LZ77 currently unsupported") in
+    | Two -> deflate_static instr emptyq in
   let rec remove_all qu =
     match Boolqueue.dequeue_byte qu with
     | Some b, qu' -> Some b :: remove_all qu'

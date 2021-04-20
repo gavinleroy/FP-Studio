@@ -4,35 +4,39 @@
 (*    Spring 21 -- OCZip    *)
 (****************************)
 
-type t
+module Boolqueue : sig
 
-(********* general helperss *********)
+  type t
 
-val create: unit -> t
+  (********* general helperss *********)
 
-val of_byte_list: int list -> t
+  val create: unit -> t
 
-val has_byte: t -> bool 
+  val of_byte_list: int list -> t
 
-val is_empty: t -> bool
+  val has_byte: t -> bool 
 
-val len_in_bytes: t -> int
+  val is_empty: t -> bool
 
-(********* enqueuing values *********)
+  val len_in_bytes: t -> int
 
-val enqueue: t -> bool -> t
+  (********* enqueuing values *********)
 
-val enqueue_all: t -> bool list -> t
+  val enqueue: t -> bool -> t
 
-val enqueue_byte: t -> int -> t
+  val enqueue_all: t -> bool list -> t
 
-val enqueue_from: t -> t -> t
+  val enqueue_byte: t -> int -> t
 
-(********* dequeuing values *********)
+  val enqueue_from: t -> t -> t
 
-val dequeue: t -> bool option * t
+  (********* dequeuing values *********)
 
-val dequeue_byte: t -> int option * t
+  val dequeue: t -> bool option * t
 
-val dequeue_byte_force: t -> int * t
+  val dequeue_byte: t -> int option * t
+
+  val dequeue_byte_force: t -> int * t
+
+end
 

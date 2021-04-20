@@ -4,80 +4,84 @@
 (*    Spring 21 -- OCZip    *)
 (****************************)
 
-open Core
+module Boolqueue = struct
 
-exception EmptyQ
+  open Core
 
-type t = bool Queue.t
+  exception EmptyQ
 
-let create () = 
-  Queue.create ()
+  type t = bool Queue.t
 
-let has_byte q = 
-  Queue.length q >= 8
+  let create () = 
+    Queue.create ()
 
-let is_empty q = 
-  Queue.is_empty q
+  let has_byte q = 
+    Queue.length q >= 8
 
-let enqueue q b = 
-  Queue.enqueue q b;
-  q
+  let is_empty q = 
+    Queue.is_empty q
 
-let enqueue_all q v =
-  Queue.enqueue_all q v;
-  q
+  let enqueue q b = 
+    Queue.enqueue q b;
+    q
 
-let dequeue q =
- Queue.dequeue q, q
+  let enqueue_all q v =
+    Queue.enqueue_all q v;
+    q
 
-let rec enqueue_from s t =
-  match dequeue s with
-  | Some b, s' -> enqueue_from s' (enqueue t b)  
-  | None, _ -> t
+  let dequeue q =
+    Queue.dequeue q, q
 
-(* given the num 0b0011 
- * the queue is ~FRONT~ 1 1 0 0 ~BACK~ *)
-let enqueue_byte q b =
-  let is_high x = (x land 1) = 1 in
-  let rec eq n b q =
-    if n = 0 then q
-    else eq (n - 1) 
-        (b lsr 1) (enqueue q (is_high b)) in
-  eq 8 b q
+  let rec enqueue_from s t =
+    match dequeue s with
+    | Some b, s' -> enqueue_from s' (enqueue t b)  
+    | None, _ -> t
 
-let rec build_byte q acc n ~success:f ~failure:esc =
-  let b2i = fun b -> 
-    match b with | true -> 1 | false -> 0 in
-  if n = 8 then f acc, q
-  else match dequeue q with
-    | Some bo, q' -> 
-      let bi = b2i bo in
-      build_byte q' 
-        (acc lor (bi lsl n)) 
-        (n + 1) 
-        ~success:f
-        ~failure:esc
-    | None, q' -> esc acc q'
+  (* given the num 0b0011 
+   * the queue is ~FRONT~ 1 1 0 0 ~BACK~ *)
+  let enqueue_byte q b =
+    let is_high x = (x land 1) = 1 in
+    let rec eq n b q =
+      if n = 0 then q
+      else eq (n - 1) 
+          (b lsr 1) (enqueue q (is_high b)) in
+    eq 8 b q
 
-(* if the queue has ~FRONT~ 1 1 0 0 ~BACK~ 
- * 0011 *)
-let dequeue_byte q =
-  if Queue.length q < 8 
-  then None, q
-  else build_byte q 0 0 
-    ~success:(fun a -> Some a)
-    ~failure:(fun _ _ -> raise EmptyQ)
+  let rec build_byte q acc n ~success:f ~failure:esc =
+    let b2i = fun b -> 
+      match b with | true -> 1 | false -> 0 in
+    if n = 8 then f acc, q
+    else match dequeue q with
+      | Some bo, q' -> 
+        let bi = b2i bo in
+        build_byte q' 
+          (acc lor (bi lsl n)) 
+          (n + 1) 
+          ~success:f
+          ~failure:esc
+      | None, q' -> esc acc q'
 
-let dequeue_byte_force q =
-  build_byte q 0 0 
-    ~success:ident
-    ~failure:(fun a b -> a, b)
+  (* if the queue has ~FRONT~ 1 1 0 0 ~BACK~ 
+   * 0011 *)
+  let dequeue_byte q =
+    if Queue.length q < 8 
+    then None, q
+    else build_byte q 0 0 
+        ~success:(fun a -> Some a)
+        ~failure:(fun _ _ -> raise EmptyQ)
 
-let len_in_bytes q =
-  let len = Queue.length q in
-  if len % 8 = 0 then len / 8
-  else 1 + (len / 8)
+  let dequeue_byte_force q =
+    build_byte q 0 0 
+      ~success:ident
+      ~failure:(fun a b -> a, b)
 
-let of_byte_list bs =
-  List.fold_left bs ~init:(create ()) ~f:enqueue_byte
+  let len_in_bytes q =
+    let len = Queue.length q in
+    if len % 8 = 0 then len / 8
+    else 1 + (len / 8)
+
+  let of_byte_list bs =
+    List.fold_left bs ~init:(create ()) ~f:enqueue_byte
+
+end (* MODULE BOOLQUEUE*)
 
