@@ -11,7 +11,7 @@ module LZ77 : sig
   type result =
     | Empty
     | Literal of int
-    (* | Pointer of int * int *)
+    | Pointer of int * int
 
   (* NOTE what does this care about?
    * - number of lookback bytes

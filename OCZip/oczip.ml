@@ -144,11 +144,12 @@ let write_archive ochnl fns =
         let compressed_size, outstr = 
           fn_to_byte_stream fn |> Zlib.deflate in 
         let lfh = fn_to_header fn 
-            (int64_to_int (Out_channel.pos ochnl)) 
+            (Out_channel.pos ochnl |> int64_to_int) 
             compressed_size in
         let pct = 
           compute_ratio_int compressed_size lfh.uncompressed_size in
-        Printf.printf "\t~ adding \"%s\" ~~ deflated ~> %.2f%%\n" lfh.filename pct;
+        Printf.printf "\tadding: \"%s\" (in=%d) (out=%d) deflated ~> %.2f%%\n" 
+          lfh.filename lfh.uncompressed_size compressed_size pct;
         write_local_file_header ochnl lfh;
         output_stream ochnl outstr; lfh) in
   let write_dir fs = 
@@ -162,7 +163,7 @@ let write_archive ochnl fns =
   write_end_dir ochnl ndirs dirsize s_pos
 
 let create_zip ~srcs:infns ~tgt:outfn =
-  Printf.printf "creating zip archive \"%s\"\n" outfn;
+  Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
   try 
     let ochnl = Out_channel.create ~binary:true outfn in
     write_archive ochnl infns; 

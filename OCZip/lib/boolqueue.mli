@@ -28,6 +28,8 @@ module Boolqueue : sig
 
   val enqueue_byte: t -> int -> t
 
+  val enqueue_all_byte_aligned: t -> bool list -> t
+
   val enqueue_from: t -> t -> t
 
   (********* dequeuing values *********)

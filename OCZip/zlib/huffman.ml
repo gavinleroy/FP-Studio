@@ -101,5 +101,14 @@ module Huffman = struct
       ~f:(fun acc (k, v) ->
           Map.add_exn acc ~key:k ~data:v)
 
-end (* HUFFMAN MODULE *)
+  let encode_lit_fixed l = 
+    encode fixed_encoder l
+
+  let encode_len_fixed _l =
+    raise Fatal
+
+  let encode_dist_fixed _d =
+    raise Fatal
+
+end (* END OF MODULE *)
 

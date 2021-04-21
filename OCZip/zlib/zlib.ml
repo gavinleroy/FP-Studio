@@ -76,19 +76,31 @@ let crc32 stream =
 (* let max_fix_block_size = *) 
 (*   Uint16.to_int Uint16.max_int *)
 
-(* let deflate_store_only instr queue = *) 
-(*   let rec eq_all qu = *)
-(*     match Stream.next instr with *)
-(*     | None -> qu *)
-(*     | Some i -> eq_all (Boolqueue.enqueue_byte i qu) *)
-(*   Boolqueue.enqueue_byte queue static_huffman_block_header *)
-(*   |> eq_all *)
-  (* let rec make_list q = *) 
-  (*   match Boolqueue.dequeue_byte q with *)
-  (*   | None, _ -> [None] *)
-  (*   | Some ob, nq -> Some ob :: make_list nq in *)
-  (* let written_bytes, fullq = enqueue_file instr (Boolqueue.create ()) in *)
-  (* written_bytes, Stream.of_list (make_list fullq) *)
+(* max stored block size is 
+ * restricted to 2 bytes *)
+let max_store_block_size =
+  Uint16.to_int Uint16.max_int
+
+(** NOTE when storing you can only do one block at a time. *)
+let deflate_store_only instr queue = 
+  let rec eq_all q =
+    if Boolqueue.len_in_bytes q >= max_store_block_size
+    then q
+    else match Stream.next instr with
+      | None -> q
+      | Some i -> eq_all (Boolqueue.enqueue_byte q i) in
+  let data = eq_all (Boolqueue.create ()) in
+  let is_final = match Stream.peek instr with
+    | None | Some None -> true
+    | _ -> false in
+  let eq2b = fun b qu -> Boolqueue.enqueue_byte 
+      (Boolqueue.enqueue_byte qu b) (b lsr 8) in
+  let len = Boolqueue.len_in_bytes data in
+  let nlen = Uint16.(of_int len |> lognot |> to_int) in
+  Boolqueue.enqueue_all_byte_aligned queue 
+    [is_final; false; false;]
+  |> eq2b len |> eq2b nlen 
+  |> Boolqueue.enqueue_from data
 
 (** the header bits for a block using static huffman codes *)
 let static_huffman_block_header =
@@ -100,56 +112,55 @@ let deflate_huffman_only instr queue =
     match Stream.next instr with
     | None -> Boolqueue.enqueue_all qu Huffman.end_of_stream_byte
     | Some i -> 
-      match Huffman.encode Huffman.fixed_encoder i with
+      match Huffman.encode_lit_fixed i with
       | None -> raise (ZlibExn "invalid byte found in input stream")
       | Some b -> eq_all (Boolqueue.enqueue_all qu b) in 
   Boolqueue.enqueue_all queue static_huffman_block_header
   |> eq_all
 
-(* WINDOW SIZE 32K *)
+(** WINDOW SIZE 32K *)
 let max_window_size =
   32 * 1024
 
+(** deflate the input stream with static huffman codes and lz77 *)
 let deflate_static instr queue =
   let rec eq_all lz77win qu =
     match LZ77.find_match lz77win instr with
     | LZ77.Empty, _ -> Boolqueue.enqueue_all qu Huffman.end_of_stream_byte
+    | LZ77.Pointer (_, _), _ -> raise (ZlibExn "unimplemented pointer result")
     | LZ77.Literal i, win' ->
-      match Huffman.encode Huffman.fixed_encoder i with
+      match Huffman.encode_lit_fixed i with
       | None -> raise (ZlibExn "invalid byte found in input stream")
       | Some b -> eq_all win' (Boolqueue.enqueue_all qu b) in 
   Boolqueue.enqueue_all queue static_huffman_block_header
   |> eq_all (LZ77.create ~back:max_window_size ~ahead:max_window_size ~str:instr)
 
 (** main entry point for the deflate algorithm  *)
-let deflate ?(level=Two) instr =
+let deflate ?(level=Zero) instr =
   (* TODO : read in a buffer of bytes, doing some heuristics at the
    * same time. Switch on whether this block is better using the
    * static codes or the dynamic codes. *)
-  let emptyq = Boolqueue.create () in
-  let queue = match level with 
-    (* each option should return the queue that is filled with bytes *)
-    | Zero -> raise (ZlibExn "don't call this pls")
-    | One -> deflate_huffman_only instr emptyq
-    | Two -> deflate_static instr emptyq in
+
+  (* add all of the bytes as bits to the queue *)
+  let rec add_all qu = 
+  let qu' = match level with 
+    | Zero -> deflate_store_only instr qu
+    | One -> deflate_huffman_only instr qu
+    | Two -> deflate_static instr qu in
+  match Stream.peek instr with
+  | None | Some None -> qu'
+  | _ -> add_all qu' in
+  (* remove all of the bits in the queue as bytes *)
   let rec remove_all qu =
     match Boolqueue.dequeue_byte qu with
-    | Some b, qu' -> Some b :: remove_all qu'
+    | Some b, qu' -> 
+      Printf.printf "%x " b;
+      Some b :: remove_all qu'
     | None, qu' -> 
       [ Some (fst (Boolqueue.dequeue_byte_force qu')); None; ] in
+  let queue =  add_all (Boolqueue.create ()) in
   let len = Boolqueue.len_in_bytes queue in
   len, (remove_all queue |> Stream.of_list)
-
-
-
-
-
-
-
-
-
-
-
 
 (* DECODING ALGORITHM *)
 (* do *)
@@ -170,7 +181,6 @@ let deflate ?(level=Two) instr =
 (*          otherwise *)
 (*             if value = end of block (256) *)
 (*                break from loop *)
-(*******v THIS SHOULDN'T HAPPEN WITH MY CURRENT ENCODER v*********)
 (*             otherwise (value = 257..285) *)
 (*                decode distance from input stream *)
 (*                move backwards distance bytes in the output *)
@@ -178,5 +188,4 @@ let deflate ?(level=Two) instr =
 (*                position to the output stream. *)
 (*       end loop *)
 (* while not last block *)
-
 

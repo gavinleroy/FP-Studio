@@ -25,9 +25,16 @@ module Boolqueue = struct
     Queue.enqueue q b;
     q
 
-  let enqueue_all q v =
-    Queue.enqueue_all q v;
+  let enqueue_all q vs =
+    Queue.enqueue_all q vs;
     q
+
+  (* NOTE requires that bytes have only been dequeued in bytes *)
+  let enqueue_all_byte_aligned q vs =
+    let rec align q' = 
+      if (Queue.length q' % 8) = 0 then q'
+      else align (enqueue q' false) in
+    enqueue_all q vs |> align
 
   let dequeue q =
     Queue.dequeue q, q

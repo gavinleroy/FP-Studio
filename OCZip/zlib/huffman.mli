@@ -20,7 +20,13 @@ module Huffman : sig
 
   val end_of_stream_byte: bool list
 
-  val encode: encoder -> int -> bool list option
+  (* val encode: encoder -> int -> bool list option *)
+
+  val encode_lit_fixed: int -> bool list option
+
+  val encode_len_fixed: int -> bool list option
+
+  val encode_dist_fixed: int -> bool list option
 
   (* val bit_list_of_int: int -> int -> bool list *)
 
