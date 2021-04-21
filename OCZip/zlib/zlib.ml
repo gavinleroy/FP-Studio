@@ -153,9 +153,7 @@ let deflate ?(level=Zero) instr =
   (* remove all of the bits in the queue as bytes *)
   let rec remove_all qu =
     match Boolqueue.dequeue_byte qu with
-    | Some b, qu' -> 
-      Printf.printf "%x " b;
-      Some b :: remove_all qu'
+    | Some b, qu' -> Some b :: remove_all qu'
     | None, qu' -> 
       [ Some (fst (Boolqueue.dequeue_byte_force qu')); None; ] in
   let queue =  add_all (Boolqueue.create ()) in
