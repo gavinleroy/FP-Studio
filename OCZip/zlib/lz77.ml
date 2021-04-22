@@ -36,9 +36,10 @@ module LZ77 = struct
   let balance v n instr =
     let blen = List.length v.behind in
     let nahead = List.take v.ahead n in
-    let nb = List.append nahead (if blen + n > v.max_lookback
-      then  (List.take v.behind (v.max_lookback - n))
-      else  v.behind) in
+    let nb = List.append (List.rev nahead)
+        (if blen + n > v.max_lookback
+         then  (List.take v.behind (v.max_lookback - n))
+         else  v.behind) in
     let na = List.append (List.drop v.ahead n) (stream_take instr n) in
     { v with ahead = na; behind = nb; }
 
@@ -53,30 +54,42 @@ module LZ77 = struct
         else n in
     mn2 l1 l2 0
 
-  let max_match_len = 258
+  let max_match_len = 
+    257
 
   let match_lngst  ~back  ~ahead =
+    (* Printf.printf "ahead_len: %d back_len: %d\n%s -- %s\n" *) 
+      (* (List.length ahead) (List.length back) *) 
+      (* (List.to_string ~f:Int.to_string (List.rev back)) *) 
+      (* (List.to_string ~f:Int.to_string ahead); *)
     let rec domatch ll =
       match ll with
       | [] -> []
       | _ :: tl -> match2 ll ahead :: domatch tl in
+    (* Printf.printf "before domatch\n"; *)
     let lens = List.rev back |> domatch |> List.rev in
+    (* Printf.printf "before fold\n"; *)
     let (_, d, ol) = List.fold lens ~init:(0, 0, None)
       ~f:(fun (acc, i, mx) x -> 
            let ni = acc + 1 in
            if x > max_match_len then ni, i, mx
            else if is_none mx then ni, ni, Some x 
-           else if Option.value_exn mx >= x then ni, i, mx
-           else ni, ni, Some x) in
-    if d <= 0 then Empty
-    else if d < 3 then Literal (List.hd_exn ahead)
-    else  Pointer ((Option.value_exn ol), d)
+           else if Option.value_exn mx <= x then ni, ni, Some x
+           else ni, i, mx) in
+    (* Printf.printf "before return d: %d\n" d; *)
+    let l = Option.value ol ~default:0 in
+    if l <= 0 then Empty
+    else if l < 3 then Literal (List.hd_exn ahead)
+    else  Pointer (l, d)
 
   let find_match v str =
     match match_lngst ~back:v.behind ~ahead:v.ahead with
-    | Empty -> Empty, v
     | Literal i -> Literal i, balance v 1 str
-    | Pointer (d, l) -> Pointer (d, l), balance v l str
+    | Pointer (l, d) -> Pointer (l, d), balance v l str
+    | Empty -> 
+      match List.hd v.ahead with
+      | None -> Empty, v
+      | Some i -> Literal i, balance v 1 str
 
 end (* END OF MODULE *)
 

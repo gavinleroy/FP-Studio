@@ -126,17 +126,27 @@ let max_window_size =
 let deflate_static instr queue =
   let rec eq_all lz77win qu =
     match LZ77.find_match lz77win instr with
-    | LZ77.Empty, _ -> Boolqueue.enqueue_all qu Huffman.end_of_stream_byte
-    | LZ77.Pointer (_, _), _ -> raise (ZlibExn "unimplemented pointer result")
+    | LZ77.Empty, _ -> 
+      (* Printf.printf "lz77.empty\n"; *)
+      Boolqueue.enqueue_all qu Huffman.end_of_stream_byte
     | LZ77.Literal i, win' ->
-      match Huffman.encode_lit_fixed i with
+      (* Printf.printf "lz77.literal i: %d\n" i; *)
+      (match Huffman.encode_lit_fixed i with
       | None -> raise (ZlibExn "invalid byte found in input stream")
-      | Some b -> eq_all win' (Boolqueue.enqueue_all qu b) in 
+      | Some b -> eq_all win' (Boolqueue.enqueue_all qu b))
+    | LZ77.Pointer (l, d), win' -> 
+      (* Printf.printf "lz77.pointer l: %d d: %d\n" l d; *)
+      match Huffman.encode_len_fixed l, Huffman.encode_dist_fixed d with
+      | None, _ -> raise (ZlibExn "encoding len invalid")
+      | _, None -> raise (ZlibExn "encoding dist invalid")
+      | Some ll, Some dd -> 
+        eq_all win' 
+          (Boolqueue.enqueue_all qu (List.append ll dd)) in
   Boolqueue.enqueue_all queue static_huffman_block_header
   |> eq_all (LZ77.create ~back:max_window_size ~ahead:max_window_size ~str:instr)
 
 (** main entry point for the deflate algorithm  *)
-let deflate ?(level=Zero) instr =
+let deflate ?(level=Two) instr =
   (* TODO : read in a buffer of bytes, doing some heuristics at the
    * same time. Switch on whether this block is better using the
    * static codes or the dynamic codes. *)
@@ -153,9 +163,11 @@ let deflate ?(level=Zero) instr =
   (* remove all of the bits in the queue as bytes *)
   let rec remove_all qu =
     match Boolqueue.dequeue_byte qu with
-    | Some b, qu' -> Some b :: remove_all qu'
+    | Some b, qu' -> 
+      Some b :: remove_all qu'
     | None, qu' -> 
-      [ Some (fst (Boolqueue.dequeue_byte_force qu')); None; ] in
+      let b = (fst (Boolqueue.dequeue_byte_force qu')) in
+      [ Some b; None; ] in
   let queue =  add_all (Boolqueue.create ()) in
   let len = Boolqueue.len_in_bytes queue in
   len, (remove_all queue |> Stream.of_list)
