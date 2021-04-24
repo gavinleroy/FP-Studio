@@ -1,5 +1,4 @@
 (library
   (name zlib)
-  (libraries core lib stdint)
-  ; (modules_without_implementation lz77)
+  (libraries core lib stdint batteries)
   (preprocess (pps ppx_jane)))
