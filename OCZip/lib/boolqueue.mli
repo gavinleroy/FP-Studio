@@ -10,7 +10,7 @@ module Boolqueue : sig
 
   (********* general helperss *********)
 
-  val create: unit -> t
+  val create: t
 
   val of_byte_list: int list -> t
 

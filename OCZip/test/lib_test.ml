@@ -24,12 +24,12 @@ let obp' v =
 
 (*  queue: ~BACK  1 0 1 1  FRONT~> *)
 let setup () = 
-  let q = Boolqueue.create () in
+  let q = Boolqueue.create in
   Boolqueue.enqueue_all 
     q [ true; true; false; true; ]
 
 let queue_test5 _ =
-  let ctx = Boolqueue.create () in
+  let ctx = Boolqueue.create in
   let v = 0b01100101 in
   let q = Boolqueue.enqueue_byte ctx v in
   let v1, _ = Boolqueue.dequeue_byte q in
@@ -50,7 +50,7 @@ let queue_test4 ctx =
 
 (* test3 requires an empty queue *)
 let queue_test3 _ = 
-  let q = Boolqueue.create () in
+  let q = Boolqueue.create in
   let start_num = 1000000 in
   let ft = (fun x -> (x land 1) = 1) in
   let rec fill n q' =

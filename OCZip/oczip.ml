@@ -81,7 +81,7 @@ let write_dir_file_header ochnl dh =
   (* External attr.	External file attributes: *)
   write_4byte_le ochnl 0;
   (* offset of local file header *)
-  write_4byte_le ochnl (dh.file_offset);
+  write_4byte_le ochnl (dh.offset);
   (* file name *)
   Out_channel.output_string ochnl dh.filename
 (* extra comment *)
@@ -126,7 +126,6 @@ let open_file_with_stats fn =
 
 let fn_to_header fn off comp_size =
   let ifile = open_file_with_stats fn in
-  (* { c_method           = Store; *)
   { c_method           = Deflate;
     mtime              = ifile.mtime;
     mdate              = ifile.mdate;
@@ -134,43 +133,66 @@ let fn_to_header fn off comp_size =
     compressed_size    = comp_size;
     uncompressed_size  = (int64_to_int ifile.size);
     filename           = ifile.filename;
-    file_offset        = off; }
+    offset             = off; }
+
+let cons_files fns = 
+  List.map fns ~f:(fun fn -> 
+      let compressed_size, outstr = 
+        fn_to_byte_stream fn |> Zlib.deflate in 
+      let lfh = fn_to_header fn 0 compressed_size in
+      let pct = 
+        compute_ratio_int compressed_size lfh.uncompressed_size in
+      let s = Printf.sprintf 
+          "    adding: \"%s\" (in=%d) (out=%d) deflated ~> %.2f%%\n" 
+          lfh.filename lfh.uncompressed_size compressed_size pct in
+      lfh, outstr, s)
 
 (* function to write all local headers 
  * data and central directory *)
 let write_archive ochnl fns =
-  let write_files fns = 
-    List.map fns ~f:(fun fn -> 
-        let compressed_size, outstr = 
-          fn_to_byte_stream fn |> Zlib.deflate in 
-        let lfh = fn_to_header fn 
-            (Out_channel.pos ochnl |> int64_to_int) 
-            compressed_size in
-        let pct = 
-          compute_ratio_int compressed_size lfh.uncompressed_size in
-        Printf.printf "\tadding: \"%s\" (in=%d) (out=%d) deflated ~> %.2f%%\n" 
-          lfh.filename lfh.uncompressed_size compressed_size pct;
-        write_local_file_header ochnl lfh;
-        output_stream ochnl outstr; lfh) in
   let write_dir fs = 
     List.fold_left fs ~init:0
       ~f:(fun acc a -> write_dir_file_header ochnl a; acc + 1) in
-  let lfhs    = write_files fns in
+  (* TODO compute the lfhs concurrently so that compressing many files
+   * is quicker. *)
+  let lfhs = cons_files fns in
+  (* TODO after getting the values of lfhs write them
+   * synchronously to the output_stream *)
+  let lfhs = List.map lfhs ~f:(fun (lfh, ostr, s) ->
+      write_local_file_header ochnl lfh; 
+      output_stream ochnl ostr; 
+      print_endline s;
+      { lfh with (* update the offset now that it is known *)
+        offset = (Out_channel.pos ochnl |> int64_to_int) }) in
   let s_pos   = Out_channel.pos ochnl in
   let ndirs   = write_dir lfhs in
   let e_pos   = Out_channel.pos ochnl in
   let dirsize = Int64.(-) e_pos s_pos in
   write_end_dir ochnl ndirs dirsize s_pos
 
-let create_zip ~srcs:infns ~tgt:outfn =
+let compress ~srcs:infns ~tgt:outfn =
   Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
+  let p = (fun typ msg -> 
+    Printf.printf (* don't touch the indenting here (: *)
+      "~~ a %s error within oczip occured ~~
+* msg: %s
+* please report to yorelnivag@gmail.com\n" typ msg) in
   try 
+
+    (* TODO uncomment to remove duplicate input files 
+     * this was removed to test async timing diffs *)
+
+    (* let uniq_cons x xs = if List.mem xs x ~equal:String.equal *) 
+    (*   then xs else x :: xs in *)
+    (* let remove_from_right xs = *) 
+    (*   List.fold_right xs ~f:uniq_cons ~init:[] in *)
+    (* let infns = remove_from_right infns in *)
     let ochnl = Out_channel.create ~binary:true outfn in
     write_archive ochnl infns; 
     Out_channel.close ochnl
   with 
-  | Zlib.ZlibExn s -> Printf.printf "a Zlib error occured ~\n\t\"%s\"\n" s
-  | _ -> print_endline "** a fatal error occured **"
+  | Zlib.ZlibExn s -> p "ZLIB" s
+  | _ -> p "FATAL" "no additional info available"
 
 (******************)
 (* main interface *)
@@ -185,7 +207,7 @@ let command =
         tgt = anon ("tgt" %: string) 
       and 
         srcs = anon (sequence ("filename" %: Filename.arg_type))
-      in fun () -> create_zip ~srcs:srcs ~tgt:tgt)
+      in fun () -> compress ~srcs:srcs ~tgt:tgt)
 
 let () =
   Command.run ~version:"0.1" ~build_info:"RWO" command

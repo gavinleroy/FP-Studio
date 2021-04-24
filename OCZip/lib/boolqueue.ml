@@ -12,7 +12,7 @@ module Boolqueue = struct
 
   type t = bool Queue.t
 
-  let create () = 
+  let create = 
     Queue.create ()
 
   let has_byte q = 
@@ -88,7 +88,7 @@ module Boolqueue = struct
     else 1 + (len / 8)
 
   let of_byte_list bs =
-    List.fold_left bs ~init:(create ()) ~f:enqueue_byte
+    List.fold_left bs ~init:create ~f:enqueue_byte
 
 end (* MODULE BOOLQUEUE*)
 

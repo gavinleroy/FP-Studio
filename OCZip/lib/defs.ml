@@ -10,17 +10,14 @@ type nonrec compress_method =
     (** Compression used for file data storage *)
 
 type nonrec local_file_header =
-  { (* flags              : int32;           (** flags *) *)
-    c_method           : compress_method; (** method of compression *)
+  { c_method           : compress_method; (** method of compression *)
     mtime              : int;             (** time of last modification *)
     mdate              : int;             (** date of last modification *)
-    crc                : int;           (** crc32 checksum *)
+    crc                : int;             (** crc32 checksum *)
     compressed_size    : int;             (** size of compressed file *)
     uncompressed_size  : int;             (** size of uncompressed file *)
-    (* extra_field_length : int32;             (** extra field length *) *)
-    filename          : string;          (** file name as a string *)
-    (* extra              : string;           (** extra information *) *)
-    file_offset        : int;             (** file offset in the zip *)
+    filename           : string;          (** file name as a string *)
+    offset             : int;             (** file offset in the zip *)
   } (**  Contents describing the local file header *)
 
 type nonrec inp_archive = 
