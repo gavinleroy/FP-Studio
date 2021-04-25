@@ -179,13 +179,14 @@ let write_archive ochnl fns =
   let dirsize = Int64.(-) e_pos s_pos in
   Async.Deferred.return (write_end_dir ochnl ndirs dirsize s_pos)
 
-let compress ~srcs:infns ~tgt:outfn =
-  Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
   let p = (fun typ msg -> 
     Printf.printf (* don't touch the indenting here (: *)
       "~~ a %s error within oczip occured ~~
 * msg: %s
-* please report to yorelnivag@gmail.com\n" typ msg) in
+* please report to yorelnivag@gmail.com\n" typ msg)
+
+let zip ~srcs:infns ~tgt:outfn =
+  Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
   try let uniq_cons x xs = 
         if List.mem xs x ~equal:String.equal 
         then xs else x :: xs in
@@ -199,21 +200,37 @@ let compress ~srcs:infns ~tgt:outfn =
   | Zlib.ZlibExn s -> Async.Deferred.return (p "ZLIB" s)
   | _ -> Async.Deferred.return (p "FATAL" "no additional info available")
 
+let unzip _tgt =
+  p "FATAL" "unzip unimplemented"
+
 (******************)
 (* main interface *)
 (******************)
 
-let command =
+let zip_command =
   Async.Command.async
-    ~summary:"OCZIP : the OCaml file compression tool"
-    ~readme:(fun () -> "TODO")
+    ~summary:"Concurrent file compression to ZIP archive"
+    Command.Let_syntax.(
+      let%map_open 
+        tgt = anon ("tgt" %: string) and 
+        srcs = anon (sequence ("filename" %: Filename.arg_type))
+      in fun () -> zip ~srcs:srcs ~tgt:tgt)
+
+let unzip_command =
+  Command.basic
+    ~summary:"Unpack zip archive"
     Command.Let_syntax.(
       let%map_open 
         tgt = anon ("tgt" %: string) 
-      and 
-        srcs = anon (sequence ("filename" %: Filename.arg_type))
-      in fun () -> compress ~srcs:srcs ~tgt:tgt)
+      in fun () -> unzip tgt)
+
+let command =
+  Command.group ~summary:"OCZip, file compression in OCaml"
+    [ "-zip", zip_command ; "-unzip", unzip_command ]
 
 let () =
-  Command.run ~version:"0.1" ~build_info:"RWO" command
+  Command.run 
+    ~version:"0.1" 
+    ~build_info:"OCZip, the OCaml file compression tool" 
+    command
 
