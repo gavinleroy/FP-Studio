@@ -7,6 +7,7 @@
 open Core
 open Lib.Utils
 open Lib.Defs
+open Async.Deferred.Let_syntax
 
 (*********************)
 (* writing utilities *)
@@ -31,9 +32,9 @@ let write_local_file_header ochnl fh =
   (* CRC 32 TODO not sure how to get this*)
   write_4byte_le ochnl fh.crc;
   (* compressed size *)
-  write_4byte_le ochnl fh.compressed_size;
+  write_4byte_le ochnl fh.csize;
   (* uncompressed size *)
-  write_4byte_le ochnl fh.uncompressed_size;
+  write_4byte_le ochnl fh.ucsize;
   (* file name size *)
   write_2byte_le ochnl (String.length fh.filename);
   (* XXX TODO extra comment size *)
@@ -65,9 +66,9 @@ let write_dir_file_header ochnl dh =
   (* CRC 32 this could be done when trying to deflate *)
   write_4byte_le ochnl (Zlib.crc32 (fn_to_byte_stream dh.filename));
   (* compressed size *)
-  write_4byte_le ochnl  dh.compressed_size;
+  write_4byte_le ochnl  dh.csize;
   (* uncompressed size *)
-  write_4byte_le ochnl dh.uncompressed_size;
+  write_4byte_le ochnl dh.ucsize;
   (* file name length *)
   write_2byte_le ochnl (String.length dh.filename);
   (* extra comment length *)
@@ -126,26 +127,37 @@ let open_file_with_stats fn =
 
 let fn_to_header fn off comp_size =
   let ifile = open_file_with_stats fn in
-  { c_method           = Deflate;
-    mtime              = ifile.mtime;
-    mdate              = ifile.mdate;
-    crc                = Zlib.crc32 (fn_to_byte_stream ifile.filename);
-    compressed_size    = comp_size;
-    uncompressed_size  = (int64_to_int ifile.size);
-    filename           = ifile.filename;
-    offset             = off; }
+  { c_method  = Deflate;
+    mtime     = ifile.mtime;
+    mdate     = ifile.mdate;
+    crc       = Zlib.crc32 (fn_to_byte_stream ifile.filename);
+    csize     = comp_size;
+    ucsize    = (int64_to_int ifile.size);
+    filename  = ifile.filename;
+    offset    = off; }
 
+(* compress each file concurrently and produce the new data stream 
+ * if the 'compressed data' is larger than the original simply 
+ * make a new stream to the original file.
+ * NOTE currently it is very likely that the compressed data becomes
+ * larger because the deflate algorithm only uses static huffman codes *)
 let cons_files fns = 
-  List.map fns ~f:(fun fn -> 
+  Async.Deferred.List.map fns ~f:(fun fn -> 
       let compressed_size, outstr = 
         fn_to_byte_stream fn |> Zlib.deflate in 
       let lfh = fn_to_header fn 0 compressed_size in
+      let lfh, outstr = if lfh.csize > lfh.ucsize
+        then { lfh with 
+               csize = lfh.ucsize;
+               c_method = Store;
+               } , (fn_to_byte_stream fn)
+        else lfh, outstr in
       let pct = 
-        compute_ratio_int compressed_size lfh.uncompressed_size in
+        compute_ratio_int lfh.csize lfh.ucsize in
       let s = Printf.sprintf 
-          "    adding: \"%s\" (in=%d) (out=%d) deflated ~> %.2f%%\n" 
-          lfh.filename lfh.uncompressed_size compressed_size pct in
-      lfh, outstr, s)
+          "    adding: \"%s\" (in=%d) (out=%d) deflated ~> %.2f%%" 
+          lfh.filename lfh.ucsize lfh.csize pct in
+       Async.Deferred.return (lfh, outstr, s))
 
 (* function to write all local headers 
  * data and central directory *)
@@ -153,22 +165,19 @@ let write_archive ochnl fns =
   let write_dir fs = 
     List.fold_left fs ~init:0
       ~f:(fun acc a -> write_dir_file_header ochnl a; acc + 1) in
-  (* TODO compute the lfhs concurrently so that compressing many files
-   * is quicker. *)
-  let lfhs = cons_files fns in
-  (* TODO after getting the values of lfhs write them
-   * synchronously to the output_stream *)
+  let%bind lfhs = cons_files fns in
   let lfhs = List.map lfhs ~f:(fun (lfh, ostr, s) ->
+      let lfh = { 
+        lfh with (* update the offset now that it is known *)
+        offset = (Out_channel.pos ochnl |> int64_to_int) } in
       write_local_file_header ochnl lfh; 
       output_stream ochnl ostr; 
-      print_endline s;
-      { lfh with (* update the offset now that it is known *)
-        offset = (Out_channel.pos ochnl |> int64_to_int) }) in
+      print_endline s; lfh) in
   let s_pos   = Out_channel.pos ochnl in
   let ndirs   = write_dir lfhs in
   let e_pos   = Out_channel.pos ochnl in
   let dirsize = Int64.(-) e_pos s_pos in
-  write_end_dir ochnl ndirs dirsize s_pos
+  Async.Deferred.return (write_end_dir ochnl ndirs dirsize s_pos)
 
 let compress ~srcs:infns ~tgt:outfn =
   Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
@@ -177,29 +186,25 @@ let compress ~srcs:infns ~tgt:outfn =
       "~~ a %s error within oczip occured ~~
 * msg: %s
 * please report to yorelnivag@gmail.com\n" typ msg) in
-  try 
-
-    (* TODO uncomment to remove duplicate input files 
-     * this was removed to test async timing diffs *)
-
-    (* let uniq_cons x xs = if List.mem xs x ~equal:String.equal *) 
-    (*   then xs else x :: xs in *)
-    (* let remove_from_right xs = *) 
-    (*   List.fold_right xs ~f:uniq_cons ~init:[] in *)
-    (* let infns = remove_from_right infns in *)
+  try let uniq_cons x xs = 
+        if List.mem xs x ~equal:String.equal 
+        then xs else x :: xs in
+    let remove_from_right xs = 
+      List.fold_right xs ~f:uniq_cons ~init:[] in
+    let infns = remove_from_right infns in
     let ochnl = Out_channel.create ~binary:true outfn in
-    write_archive ochnl infns; 
-    Out_channel.close ochnl
+    write_archive ochnl infns 
+    >>| fun () -> Out_channel.close ochnl
   with 
-  | Zlib.ZlibExn s -> p "ZLIB" s
-  | _ -> p "FATAL" "no additional info available"
+  | Zlib.ZlibExn s -> Async.Deferred.return (p "ZLIB" s)
+  | _ -> Async.Deferred.return (p "FATAL" "no additional info available")
 
 (******************)
 (* main interface *)
 (******************)
 
 let command =
-  Command.basic
+  Async.Command.async
     ~summary:"OCZIP : the OCaml file compression tool"
     ~readme:(fun () -> "TODO")
     Command.Let_syntax.(

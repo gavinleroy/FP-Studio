@@ -62,7 +62,7 @@ let fn_to_byte_stream fn =
        with End_of_file -> None)
 
 let compute_ratio_float lhs rhs =
-  lhs /. rhs *. 100.
+  (1. -. lhs /. rhs) *. 100.
 
 let compute_ratio_int lhs rhs =
   compute_ratio_float (Int.to_float lhs) (Int.to_float rhs)
