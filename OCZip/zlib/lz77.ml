@@ -88,8 +88,7 @@ module LZ77 = struct
     | Some is ->
       match match_from str v 0 is [] with
       (* this could happen if all idx are too far back *)
-      | 0, _, _ -> Empty, []
-      | _, _, [] -> Empty, []
+      | 0, _, _ | _, _, [] -> Empty, []
       | len, xs, rs ->
         let mx = Option.value_exn 
             (List.max_elt rs ~compare:Int.compare) in
