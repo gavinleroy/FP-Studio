@@ -86,7 +86,7 @@ let deflate_store_only instr queue =
     else match Stream.next instr with
       | None -> q
       | Some i -> eq_all (Boolqueue.enqueue_byte q i) in
-  let data = eq_all Boolqueue.create in
+  let data = eq_all (Boolqueue.create ()) in
   let is_final = match Stream.peek instr with
     | None | Some None -> true
     | _ -> false in
@@ -158,7 +158,7 @@ let deflate ?(level=Two) instr =
     | None, qu' -> 
       let b = (fst (Boolqueue.dequeue_byte_force qu')) in
       [ Some b; None; ] in
-  let queue =  add_all Boolqueue.create in
+  let queue =  add_all (Boolqueue.create ()) in
   let len = Boolqueue.len_in_bytes queue in
   len, (remove_all queue |> Stream.of_list)
 

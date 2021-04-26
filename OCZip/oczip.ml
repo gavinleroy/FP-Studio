@@ -180,19 +180,28 @@ let write_archive ochnl fns =
   Async.Deferred.return (write_end_dir ochnl ndirs dirsize s_pos)
 
   let p = (fun typ msg -> 
-    Printf.printf (* don't touch the indenting here (: *)
+    ANSITerminal.printf (* don't touch the indenting here (: *)
+      [ANSITerminal.magenta; ANSITerminal.Bold]
       "~~ a %s error within oczip occured ~~
 * msg: %s
 * please report to yorelnivag@gmail.com\n" typ msg)
 
 let zip ~srcs:infns ~tgt:outfn =
   Printf.printf "creating zip archive: \"%s\" ~\n" outfn;
-  try let uniq_cons x xs = 
+  try 
+    let uniq_cons x xs = 
         if List.mem xs x ~equal:String.equal 
         then xs else x :: xs in
     let remove_from_right xs = 
       List.fold_right xs ~f:uniq_cons ~init:[] in
-    let infns = remove_from_right infns in
+    (* skip files that don't exist and remove dups *)
+    let infns = List.filter infns ~f:(fun f ->
+      match Sys.file_exists ~follow_symlinks:false f with
+        | `Yes -> true
+        | _ -> ANSITerminal.printf 
+                 [ANSITerminal.yellow; ANSITerminal.Bold]
+                 "    ignoring '%s': does not exist\n" f; 
+          false) |> remove_from_right in
     let ochnl = Out_channel.create ~binary:true outfn in
     write_archive ochnl infns 
     >>| fun () -> Out_channel.close ochnl
@@ -212,8 +221,8 @@ let zip_command =
     ~summary:"Concurrent file compression to ZIP archive"
     Command.Let_syntax.(
       let%map_open 
-        tgt = anon ("tgt" %: string) and 
-        srcs = anon (sequence ("filename" %: Filename.arg_type))
+        tgt = flag "-o" (required string) ~doc:"tgt archive filename" 
+      and srcs = anon (sequence ("filename" %: Filename.arg_type))
       in fun () -> zip ~srcs:srcs ~tgt:tgt)
 
 let unzip_command =

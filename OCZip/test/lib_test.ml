@@ -24,12 +24,12 @@ let obp' v =
 
 (*  queue: ~BACK  1 0 1 1  FRONT~> *)
 let setup () = 
-  let q = Boolqueue.create in
+  let q = (Boolqueue.create ()) in
   Boolqueue.enqueue_all 
     q [ true; true; false; true; ]
 
 let queue_test5 _ =
-  let ctx = Boolqueue.create in
+  let ctx = (Boolqueue.create ()) in
   let v = 0b01100101 in
   let q = Boolqueue.enqueue_byte ctx v in
   let v1, _ = Boolqueue.dequeue_byte q in
@@ -38,35 +38,28 @@ let queue_test5 _ =
     ~printer:obp'
     (Some v) v1
 
-let queue_test4 ctx = 
+let queue_test4 _ = 
+  let q = (Boolqueue.create ()) in
   (* ~back~ 0110 1011 ~front~> *)
   let q = Boolqueue.enqueue_all 
-      ctx [ false; true; true; false; ] in
+      q [ true; true; false; true; false; true; true; false; ] in
+  assert_equal ~msg:"len in bytes"
+    1 (Boolqueue.len_in_bytes q);
   let v1, _ = Boolqueue.dequeue_byte q in
   assert_equal
     ~msg:"dequeueing byte"
     ~printer:obp'
     (Some 0b01101011) v1
 
-(* test3 requires an empty queue *)
 let queue_test3 _ = 
-  let q = Boolqueue.create in
-  let start_num = 1000000 in
-  let ft = (fun x -> (x land 1) = 1) in
-  let rec fill n q' =
-    match n with
-    | 0 -> q'
-    | _ -> 
-      fill (n - 1) (Boolqueue.enqueue q' (ft n)) in
-  let rec ass n q' = 
-    match n with
-    | 0 -> ()
-    | _ -> 
-      let (v, q'') = Boolqueue.dequeue q' in
-      assert_equal ~msg:"queue_test3" ~printer:obp (Some (ft n)) v; 
-      ass (n - 1) q'' in
-  let q = fill start_num q in
-  ass start_num q
+  let v = 0xff in
+  let q = Boolqueue.enqueue_byte 
+      (Boolqueue.create ()) v in
+  let v', _ = Boolqueue.dequeue_byte q in
+  assert_equal
+    ~msg:"dequeueing byte"
+    ~printer:obp'
+    (Some v) v'
 
 let queue_test2 q = 
   let (v, q2) = (Boolqueue.dequeue q) in
@@ -90,7 +83,7 @@ let suite =
     "queue_test1" >:: (fun _ -> queue_test1 (setup ()));
     "queue_test2" >:: (fun _ -> queue_test2 (setup ()));
     "queue_test3" >:: queue_test3;
-    "queue_test4" >:: (fun _ -> queue_test4 (setup ()));
+    "queue_test4" >:: queue_test4;
     "queue_test5" >:: queue_test5;
   ]
 

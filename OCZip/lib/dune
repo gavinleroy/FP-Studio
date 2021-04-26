@@ -1,4 +1,4 @@
 (library
   (name lib)
-  (libraries core bignum.bigint)
+  (libraries core)
   (preprocess (pps ppx_jane)))

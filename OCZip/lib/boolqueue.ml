@@ -12,7 +12,7 @@ module Boolqueue = struct
 
   type t = bool Queue.t
 
-  let create = 
+  let create () = 
     Queue.create ()
 
   let has_byte q = 
@@ -50,8 +50,8 @@ module Boolqueue = struct
     let is_high x = (x land 1) = 1 in
     let rec eq n b q =
       if n = 0 then q
-      else eq (n - 1) 
-          (b lsr 1) (enqueue q (is_high b)) in
+      else 
+        eq (n - 1) (b lsr 1) (enqueue q (is_high b)) in
     eq 8 b q
 
   let rec build_byte q acc n ~success:f ~failure:esc =
@@ -88,7 +88,7 @@ module Boolqueue = struct
     else 1 + (len / 8)
 
   let of_byte_list bs =
-    List.fold_left bs ~init:create ~f:enqueue_byte
+    List.fold_left bs ~init:(create ()) ~f:enqueue_byte
 
 end (* MODULE BOOLQUEUE*)
 
