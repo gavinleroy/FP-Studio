@@ -70,7 +70,8 @@ rather than worry about reading a zip file (which is largely stateful and uninte
 
 * UTILITY : allow users to add a file to an existing zip archive.
 
-* etc ...
+* UTILITY : allow users to add a `-r` flag for recursive compression. 
+Currently, directories are not supported
 
 Cheers! :beers:
 
